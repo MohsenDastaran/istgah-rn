@@ -6,7 +6,7 @@ import { MoonStarIcon, StarIcon, SunIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Image, type ImageStyle, View } from 'react-native';
 import { Uniwind, useUniwind } from 'uniwind';
-
+import { Input } from '@/components/ui/input';
 const LOGO = {
   light: require('@/assets/images/react-native-reusables-light.png'),
   dark: require('@/assets/images/react-native-reusables-dark.png'),
@@ -52,6 +52,7 @@ export default function Screen() {
             </Button>
           </Link>
         </View>
+        <Input placeholder="Enter your name" />
       </View>
     </>
   );
