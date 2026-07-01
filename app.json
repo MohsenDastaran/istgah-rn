@@ -11,7 +11,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mohsendastaran.minimal"
     },
     "android": {
       "adaptiveIcon": {
@@ -39,6 +40,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "newArchEnabled": true
   }
 }

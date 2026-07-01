@@ -4,9 +4,14 @@ import { Text } from '@/components/ui/text';
 import { Link, Stack } from 'expo-router';
 import { MoonStarIcon, StarIcon, SunIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Image, type ImageStyle, View } from 'react-native';
+import { Image, type ImageStyle, TurboModuleRegistry, View } from 'react-native';
 import { Uniwind, useUniwind } from 'uniwind';
 import { Input } from '@/components/ui/input';
+
+const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
+const SheetSection = isTrueSheetLinked
+  ? require('@/components/sheet-section').SheetSection
+  : null;
 const LOGO = {
   light: require('@/assets/images/react-native-reusables-light.png'),
   dark: require('@/assets/images/react-native-reusables-dark.png'),
@@ -53,6 +58,13 @@ export default function Screen() {
           </Link>
         </View>
         <Input placeholder="Enter your name" />
+        {SheetSection ? (
+          <SheetSection />
+        ) : (
+          <Text className="text-muted-foreground text-center text-sm">
+            TrueSheet requires a development build. Run: npx expo run:android
+          </Text>
+        )}
       </View>
     </>
   );

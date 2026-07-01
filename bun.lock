@@ -5,6 +5,7 @@
     "": {
       "name": "minimal",
       "dependencies": {
+        "@lodev09/react-native-true-sheet": "^3.11.2",
         "@rn-primitives/accordion": "^1.4.0",
         "@rn-primitives/alert-dialog": "^1.4.0",
         "@rn-primitives/aspect-ratio": "^1.4.0",
@@ -309,6 +310,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@lodev09/react-native-true-sheet": ["@lodev09/react-native-true-sheet@3.11.2", "", { "peerDependencies": { "@radix-ui/react-dialog": ">=1", "@radix-ui/react-presence": ">=1", "@react-navigation/core": ">=7", "react": "*", "react-native": "*", "react-native-reanimated": ">=4", "react-native-worklets": "*" }, "optionalPeers": ["@radix-ui/react-dialog", "@radix-ui/react-presence", "@react-navigation/core", "react-native-reanimated", "react-native-worklets"] }, "sha512-ENSHnX0juBtrqElTKz4WMas9CLYPlv/y5GuATK325GuVIYFxHE8uo5ttCmXPksCGzQTrkiPtmL8Jw0QvtwQi5g=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.2", "", {}, "sha512-ceTwaxc4I5IOi97DgCotl3pqiyRGvffcc0oOsE2dQYaJOFIDsDt4VWG6xEbg1QePv9QWausCEIppud/tJ1wNig=="],
 
