@@ -4,14 +4,16 @@ import { useI18n } from '@/lib/i18n';
 import { Stack } from 'expo-router';
 import { MoonStarIcon, SunIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { StyleSheet, TurboModuleRegistry, View } from 'react-native';
+import { StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
 import { Uniwind, useUniwind } from 'uniwind';
-import { Map } from '@/components/ui/map';
 
 const BLUE = '#3784d7';
 
 const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
 const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').SheetSection : null;
+
+const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
+const Map = isMapLibreLinked ? require('@/components/ui/map').Map : null;
 
 export default function Screen() {
   const { t } = useI18n();
@@ -26,8 +28,16 @@ export default function Screen() {
         }}
       />
       <View style={styles.container}>
+        {Map ? (
+          <Map zoom={12} center={[-122.4194, 37.7749]} />
+        ) : (
+          <View style={styles.mapFallback}>
+            <Text style={styles.mapFallbackText}>
+              Map requires a development build. Run: npx expo run:android
+            </Text>
+          </View>
+        )}
         {SheetSection && <SheetSection />}
-        <Map zoom={12} center={[-122.4194, 37.7749]} />
       </View>
     </>
   );
@@ -37,6 +47,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BLUE,
+  },
+  mapFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  mapFallbackText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    fontSize: 14,
   },
 });
 
