@@ -1,25 +1,24 @@
 {
   "expo": {
-    "name": "minimal",
-    "slug": "minimal",
+    "name": "istgah",
+    "slug": "istgah",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "minimal",
+    "scheme": "istgah",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mohsendastaran.minimal"
+      "bundleIdentifier": "com.mohsendastaran.istgah"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.mohsendastaran.minimal"
+      "package": "com.mohsendastaran.istgah",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "web": {
       "bundler": "metro",
@@ -37,7 +36,8 @@
         }
       ],
       "expo-status-bar",
-      "expo-localization"
+      "expo-localization",
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true

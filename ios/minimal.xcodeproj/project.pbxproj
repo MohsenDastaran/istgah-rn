@@ -260,8 +260,8 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mohsendastaran.minimal";
-				PRODUCT_NAME = "minimal";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mohsendastaran.istgah";
+				PRODUCT_NAME = "istgah";
 				SWIFT_OBJC_BRIDGING_HEADER = "minimal/minimal-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -290,8 +290,8 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mohsendastaran.minimal";
-				PRODUCT_NAME = "minimal";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mohsendastaran.istgah";
+				PRODUCT_NAME = "istgah";
 				SWIFT_OBJC_BRIDGING_HEADER = "minimal/minimal-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";

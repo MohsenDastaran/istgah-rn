@@ -1,4 +1,4 @@
-package com.mohsendastaran.minimal
+package com.mohsendastaran.istgah
 
 import android.app.Application
 import android.content.res.Configuration

@@ -1,5 +1,5 @@
 {
-  "name": "minimal",
+  "name": "istgah",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@lodev09/react-native-true-sheet": "^3.11.2",
+    "@maplibre/maplibre-react-native": "11.2.1",
     "@rn-primitives/accordion": "^1.4.0",
     "@rn-primitives/alert-dialog": "^1.4.0",
     "@rn-primitives/aspect-ratio": "^1.4.0",
@@ -42,6 +43,7 @@
     "expo-haptics": "~56.0.3",
     "expo-linking": "~56.0.14",
     "expo-localization": "~56.0.6",
+    "expo-location": "^19.0.8",
     "expo-router": "~56.2.11",
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",

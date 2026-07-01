@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.mohsendastaran.minimal'
+    namespace 'com.mohsendastaran.istgah'
     defaultConfig {
-        applicationId 'com.mohsendastaran.minimal'
+        applicationId 'com.mohsendastaran.istgah'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

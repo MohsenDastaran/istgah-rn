@@ -1,4 +1,4 @@
-package com.mohsendastaran.minimal
+package com.mohsendastaran.istgah
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

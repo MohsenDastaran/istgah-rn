@@ -6,13 +6,12 @@ import { MoonStarIcon, SunIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { StyleSheet, TurboModuleRegistry, View } from 'react-native';
 import { Uniwind, useUniwind } from 'uniwind';
+import { Map } from '@/components/ui/map';
 
 const BLUE = '#3784d7';
 
 const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
-const SheetSection = isTrueSheetLinked
-  ? require('@/components/sheet-section').SheetSection
-  : null;
+const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').SheetSection : null;
 
 export default function Screen() {
   const { t } = useI18n();
@@ -28,6 +27,7 @@ export default function Screen() {
       />
       <View style={styles.container}>
         {SheetSection && <SheetSection />}
+        <Map zoom={12} center={[-122.4194, 37.7749]} />
       </View>
     </>
   );
