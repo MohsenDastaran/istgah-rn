@@ -8,8 +8,8 @@ const translations = {
     appName: 'Istgah',
     subtitle: 'The true native bottom sheet experience.',
     search: 'Search...',
-    action1: 'Action 1',
-    action2: 'Action 2',
+    english: 'English',
+    persian: 'Persian',
     expand: 'Expand',
     collapse: 'Collapse',
     confirm: 'Confirm',
@@ -19,8 +19,8 @@ const translations = {
     appName: 'ایستگاه',
     subtitle: 'تجربه واقعی برگه بومی در React Native.',
     search: 'جستجو...',
-    action1: 'اکشن اول',
-    action2: 'اکشن دوم',
+    english: 'انگلیسی',
+    persian: 'فارسی',
     expand: 'گسترش',
     collapse: 'جمع‌کردن',
     confirm: 'تایید',
@@ -45,6 +45,15 @@ type ExpoLocalizationModule = {
   }>;
   addListener: (event: 'onLocaleSettingsChanged', listener: () => void) => { remove: () => void };
 };
+
+type I18nContextValue = {
+  t: Strings;
+  lang: Lang;
+  isRTL: boolean;
+  setLang: (lang: Lang) => void;
+};
+
+const I18nContext = React.createContext<I18nContextValue | null>(null);
 
 function readLocaleFromIntl(): DeviceLocale {
   const languageTag = Intl.DateTimeFormat().resolvedOptions().locale ?? 'en';
@@ -75,19 +84,16 @@ function readDeviceLocale(): DeviceLocale {
   return readLocaleFromIntl();
 }
 
-function toI18n(locale: DeviceLocale) {
-  const lang: Lang = locale.languageCode === 'fa' ? 'fa' : 'en';
-  const isRTL = locale.textDirection === 'rtl';
-
-  return { t: translations[lang], lang, isRTL };
+function deviceLocaleToLang(locale: DeviceLocale): Lang {
+  return locale.languageCode === 'fa' ? 'fa' : 'en';
 }
 
-export function useI18n(): { t: Strings; lang: Lang; isRTL: boolean } {
-  const [locale, setLocale] = React.useState(readDeviceLocale);
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  const [lang, setLang] = React.useState<Lang>(() => deviceLocaleToLang(readDeviceLocale()));
 
   React.useEffect(() => {
     const localization = requireOptionalNativeModule<ExpoLocalizationModule>('ExpoLocalization');
-    const refresh = () => setLocale(readDeviceLocale());
+    const refresh = () => setLang(deviceLocaleToLang(readDeviceLocale()));
 
     const subscription = localization?.addListener?.('onLocaleSettingsChanged', refresh);
 
@@ -106,5 +112,23 @@ export function useI18n(): { t: Strings; lang: Lang; isRTL: boolean } {
     };
   }, []);
 
-  return React.useMemo(() => toI18n(locale), [locale]);
+  const value = React.useMemo<I18nContextValue>(
+    () => ({
+      t: translations[lang],
+      lang,
+      isRTL: lang === 'fa',
+      setLang,
+    }),
+    [lang]
+  );
+
+  return React.createElement(I18nContext.Provider, { value }, children);
+}
+
+export function useI18n(): I18nContextValue {
+  const context = React.useContext(I18nContext);
+  if (!context) {
+    throw new Error('useI18n must be used within I18nProvider');
+  }
+  return context;
 }

@@ -111,6 +111,7 @@ const btnStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: { opacity: 0.8 },
+  active: { backgroundColor: '#2a7fd4' },
   text: { color: '#fff' },
   hint: { fontSize: 10, color: 'rgba(255, 255, 255, 0.5)' },
   loader: { position: 'absolute', right: SPACING },
@@ -154,7 +155,7 @@ const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, lang, setLang } = useI18n();
 
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
@@ -189,8 +190,18 @@ const SheetSectionInner = () => {
           <Text style={styles.subtitle}>{t.subtitle}</Text>
         </View>
 
-        <SheetButton text={t.action1} onPress={() => {}} />
-        <SheetButton text={t.action2} onPress={() => {}} />
+        <ButtonRow isRTL={isRTL}>
+          <SheetButton
+            text={t.english}
+            onPress={() => setLang('en')}
+            style={lang === 'en' && btnStyles.active}
+          />
+          <SheetButton
+            text={t.persian}
+            onPress={() => setLang('fa')}
+            style={lang === 'fa' && btnStyles.active}
+          />
+        </ButtonRow>
 
         <View style={{ height: SPACING / 2 }} />
 
