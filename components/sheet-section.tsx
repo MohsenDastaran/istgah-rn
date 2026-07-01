@@ -4,6 +4,7 @@ import {
   ReanimatedTrueSheetProvider,
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
+import { useI18n } from '@/lib/i18n';
 import * as React from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +17,7 @@ import {
   View,
   useWindowDimensions,
   type PressableProps,
+  type TextStyle,
 } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
@@ -32,14 +34,20 @@ const DARK_GRAY = '#333b48';
 const LIGHT_GRAY = '#ebedf1';
 const DARK_BLUE = '#1f64ae';
 
-// ─── Sheet Header (search bar shown as the grabber area) ─────────────────────
-const SheetHeader = () => (
+// ─── Sheet Header ─────────────────────────────────────────────────────────────
+interface SheetHeaderProps {
+  placeholder: string;
+  isRTL: boolean;
+}
+
+const SheetHeader = ({ placeholder, isRTL }: SheetHeaderProps) => (
   <Animated.View style={headerStyles.container}>
     <View style={headerStyles.inputWrap}>
       <TextInput
-        style={headerStyles.input}
-        placeholder="جستجو..."
+        style={[headerStyles.input, isRTL && headerStyles.rtlInput]}
+        placeholder={placeholder}
         placeholderTextColor={LIGHT_GRAY}
+        textAlign={isRTL ? 'right' : 'left'}
       />
     </View>
   </Animated.View>
@@ -67,6 +75,9 @@ const headerStyles = StyleSheet.create({
     height: INPUT_HEIGHT,
     color: 'white',
   },
+  rtlInput: {
+    writingDirection: 'rtl',
+  } as TextStyle,
 });
 
 // ─── Pill button ──────────────────────────────────────────────────────────────
@@ -106,15 +117,23 @@ const btnStyles = StyleSheet.create({
 });
 
 // ─── Button row ───────────────────────────────────────────────────────────────
-const ButtonRow = ({ children }: { children: React.ReactNode }) => (
-  <View style={{ flexDirection: 'row', gap: GAP }}>
+const ButtonRow = ({ children, isRTL }: { children: React.ReactNode; isRTL: boolean }) => (
+  <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: GAP }]}>
     {React.Children.map(children, (child) => (
       <View style={{ flex: 1 }}>{child}</View>
     ))}
   </View>
 );
 
-// ─── Footer bar ───────────────────────────────────────────────────────────────
+// // ─── Footer bar ───────────────────────────────────────────────────────────────
+// const SheetFooter = ({ text, onPress }: { text: string; onPress?: () => void }) => (
+//   <Pressable
+//     style={({ pressed }) => [footerStyles.wrapper, pressed && footerStyles.pressed]}
+//     onPress={onPress}
+//   >
+//     <Text style={footerStyles.text}>{text}</Text>
+//   </Pressable>
+// );
 
 const footerStyles = StyleSheet.create({
   wrapper: {
@@ -127,27 +146,27 @@ const footerStyles = StyleSheet.create({
   text: { color: '#fff', fontWeight: '600' },
 });
 
-// ─── Animated floating button (moves up with the sheet) ──────────────────────
+// ─── Animated floating button ─────────────────────────────────────────────────
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-// ─── Inner component (needs to be inside ReanimatedTrueSheetProvider) ─────────
+// ─── Inner (must live inside ReanimatedTrueSheetProvider) ────────────────────
 const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
+  const { t, isRTL } = useI18n();
 
-  // First detent: only show the header (search bar)
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
-  // Float button rides up as the sheet expands
   const floatingStyle = useAnimatedStyle(() => {
     const translateY = Math.min(-HEADER_HEIGHT, -(height - animatedPosition.value));
     return { transform: [{ translateY }] };
   });
 
+  const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
+
   return (
     <>
-      {/* Floating action button that brings sheet to mid detent */}
       <AnimatedTouchable
         activeOpacity={0.6}
         style={[styles.floatingBtn, floatingStyle]}
@@ -160,32 +179,31 @@ const SheetSectionInner = () => {
         detents={[minHeight / height, 'auto', 1]}
         initialDetentIndex={0}
         dimmedDetentIndex={1}
-        style={styles.content}
+        style={contentStyle}
         detached
         dismissible={false}
         backgroundColor={DARK}
-        header={<SheetHeader />}>
-        {/* Title block */}
-        <View style={styles.heading}>
-          <Text style={styles.title}>استگاه</Text>
-          <Text style={styles.subtitle}>تجربه واقعی برگه بومی در React Native.</Text>
+        header={<SheetHeader placeholder={t.search} isRTL={isRTL} />}>
+        <View style={[styles.heading, isRTL && styles.rtlBlock]}>
+          <Text style={styles.title}>{t.appName}</Text>
+          <Text style={styles.subtitle}>{t.subtitle}</Text>
         </View>
 
-        <SheetButton text="اکشن اول" onPress={() => {}} />
-        <SheetButton text="اکشن دوم" onPress={() => {}} />
+        <SheetButton text={t.action1} onPress={() => {}} />
+        <SheetButton text={t.action2} onPress={() => {}} />
 
         <View style={{ height: SPACING / 2 }} />
 
-        <ButtonRow>
-          <SheetButton text="گسترش" onPress={() => sheetRef.current?.resize(2)} />
-          <SheetButton text="جمع‌کردن" onPress={() => sheetRef.current?.resize(0)} />
+        <ButtonRow isRTL={isRTL}>
+          <SheetButton text={t.expand} onPress={() => sheetRef.current?.resize(2)} />
+          <SheetButton text={t.collapse} onPress={() => sheetRef.current?.resize(0)} />
         </ButtonRow>
       </ReanimatedTrueSheet>
     </>
   );
 };
 
-// ─── Public export — wraps its own providers ──────────────────────────────────
+// ─── Public export — manages its own providers ────────────────────────────────
 export function SheetSection() {
   return (
     <TrueSheetProvider>
@@ -216,6 +234,9 @@ const styles = StyleSheet.create({
   },
   heading: {
     marginBottom: SPACING,
+  },
+  rtlBlock: {
+    alignItems: 'flex-end',
   },
   title: {
     fontSize: 24,
