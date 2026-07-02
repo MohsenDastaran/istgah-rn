@@ -430,6 +430,7 @@ const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
+  const currentDetentRef = React.useRef<number>(0);
   const { t, isRTL, lang, setLang } = useI18n();
   const { filteredStations, selectedStation, selectStation, searchQuery, setSearchQuery } =
     useStations();
@@ -443,15 +444,19 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
 
-  // When a station is selected, expand sheet to 'auto' detent
+  // When a station is selected from the map (sheet is minimised at detent 0),
+  // expand to the 'auto' detent.  If the sheet is already open (the user tapped
+  // a row in the list), skip the resize — swapping the content is enough and
+  // calling resize(1) while already at detent 1 causes a native re-layout that
+  // briefly expands the sheet to full-height, making the map vanish.
   React.useEffect(() => {
-    if (selectedStation) {
+    if (selectedStation && currentDetentRef.current === 0) {
       sheetRef.current?.resize(1);
     }
   }, [selectedStation]);
 
-  const handleStationPress = (station: typeof selectedStation) => {
-    selectStation(station);
+  const handleStationPress = (station: Station) => {
+    selectStation(station, { flyTo: true });
   };
 
   return (
@@ -472,6 +477,9 @@ const SheetSectionInner = () => {
         style={contentStyle}
         detached
         backgroundColor={DARK}
+        onDetentChange={(e) => {
+          currentDetentRef.current = e.nativeEvent.index;
+        }}
         header={
           <SheetHeader
             placeholder={t.search}

@@ -142,7 +142,8 @@ const MapLayers = React.memo(function MapLayers({
 
 // ─── Map content (children of <Map>) ─────────────────────────────────────────
 function MapContent() {
-  const { selectedStation, route, selectStation, setUserLocation } = useStations();
+  const { selectedStation, route, selectStation, setUserLocation, pendingFlyTo, clearPendingFlyTo } =
+    useStations();
   // Safe: MapContent is only ever rendered inside <Map>, which provides MapContext.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { cameraRef } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
@@ -165,6 +166,16 @@ function MapContent() {
       setUserLocation([position.coords.longitude, position.coords.latitude]);
     }
   }, [position, setUserLocation]);
+
+  React.useEffect(() => {
+    if (!pendingFlyTo || !cameraRef.current) return;
+    cameraRef.current.flyTo({
+      center: pendingFlyTo,
+      zoom: 14,
+      duration: 1500,
+    });
+    clearPendingFlyTo();
+  }, [pendingFlyTo, clearPendingFlyTo, cameraRef]);
 
   if (!mapComponents) return null;
   const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;

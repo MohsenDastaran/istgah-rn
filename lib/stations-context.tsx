@@ -12,7 +12,9 @@ type StationsContextValue = {
   routeLoading: boolean;
   userLocation: [number, number] | null;
   setSearchQuery: (q: string) => void;
-  selectStation: (station: Station | null) => void;
+  selectStation: (station: Station | null, options?: { flyTo?: boolean }) => void;
+  pendingFlyTo: [number, number] | null;
+  clearPendingFlyTo: () => void;
   setUserLocation: (coords: [number, number] | null) => void;
   fetchRoute: () => Promise<void>;
   clearRoute: () => void;
@@ -28,6 +30,7 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
   const [routeDuration, setRouteDuration] = React.useState<number | null>(null);
   const [routeLoading, setRouteLoading] = React.useState(false);
   const [userLocation, setUserLocation] = React.useState<[number, number] | null>(null);
+  const [pendingFlyTo, setPendingFlyTo] = React.useState<[number, number] | null>(null);
 
   const filteredStations = React.useMemo(() => {
     if (!searchQuery.trim()) return STATIONS;
@@ -41,13 +44,23 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
     setSearchQueryState(q);
   }, []);
 
-  const selectStation = React.useCallback((station: Station | null) => {
-    setSelectedStation(station);
-    if (!station) {
-      setRoute(null);
-      setRouteDistance(null);
-      setRouteDuration(null);
-    }
+  const selectStation = React.useCallback(
+    (station: Station | null, options?: { flyTo?: boolean }) => {
+      setSelectedStation(station);
+      if (options?.flyTo && station) {
+        setPendingFlyTo(station.coordinates);
+      }
+      if (!station) {
+        setRoute(null);
+        setRouteDistance(null);
+        setRouteDuration(null);
+      }
+    },
+    []
+  );
+
+  const clearPendingFlyTo = React.useCallback(() => {
+    setPendingFlyTo(null);
   }, []);
 
   const clearRoute = React.useCallback(() => {
@@ -99,6 +112,8 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       userLocation,
       setSearchQuery,
       selectStation,
+      pendingFlyTo,
+      clearPendingFlyTo,
       setUserLocation,
       fetchRoute,
       clearRoute,
@@ -114,6 +129,8 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       userLocation,
       setSearchQuery,
       selectStation,
+      pendingFlyTo,
+      clearPendingFlyTo,
       fetchRoute,
       clearRoute,
     ]
