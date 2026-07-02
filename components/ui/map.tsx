@@ -13,9 +13,17 @@ import {
   type MapRef,
   type StyleSpecification,
 } from '@maplibre/maplibre-react-native';
-import * as Location from 'expo-location';
-import { createContext, use, useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useUniwind } from 'uniwind';
 
 type MapContextValue = {
@@ -40,10 +48,14 @@ const defaultStyles = {
   light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
 };
 
+const MAP_LOAD_TIMEOUT_MS = 8000;
+
 type MapStyleOption = string | StyleSpecification;
 
 type MapProps = {
   children?: ReactNode;
+  /** Screen-level UI (sheet, controls) rendered above the map with a high z-index. */
+  chrome?: ReactNode;
   /** React overlay rendered above the native map. */
   overlay?: ReactNode;
   /** Custom map styles for light and dark themes. Overrides the default Carto styles. */
@@ -64,13 +76,17 @@ type MapProps = {
 };
 
 const DefaultLoader = () => (
-  <View className="absolute inset-0 items-center justify-center bg-white/80">
+  <View
+    pointerEvents="none"
+    className="absolute inset-0 items-center justify-center bg-white/50"
+    style={{ zIndex: 1 }}>
     <ActivityIndicator size="small" color="#999" />
   </View>
 );
 
 function Map({
   children,
+  chrome,
   overlay,
   styles,
   center = [0, 0],
@@ -88,33 +104,68 @@ function Map({
       ? (styles?.dark ?? defaultStyles.dark)
       : (styles?.light ?? defaultStyles.light);
 
-  const handleMapIdle = () => {
-    if (!isLoaded) {
-      setIsLoaded(true);
-    }
-  };
+  const markLoaded = useCallback(() => {
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) return;
+    const timeout = setTimeout(markLoaded, MAP_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, [isLoaded, markLoaded]);
 
   return (
     <MapContext value={{ mapRef, cameraRef, isLoaded, theme }}>
-      <View className={cn('relative flex-1', className)}>
+      <View className={cn('relative flex-1', className)} pointerEvents="box-none">
         <MapLibreMap
           ref={mapRef}
           style={{ flex: 1 }}
           mapStyle={mapStyle}
-          onDidFinishLoadingMap={handleMapIdle}
+          androidView={Platform.OS === 'android' ? 'texture' : undefined}
+          onDidFinishLoadingMap={markLoaded}
+          onDidFinishLoadingStyle={markLoaded}
+          onDidFinishRenderingMapFully={markLoaded}
           onPress={onPress}
           compass={false}
           logo={false}
           attribution={false}>
-          <Camera ref={cameraRef} zoom={zoom} center={center} easing="fly" duration={1000} />
+          <Camera ref={cameraRef} initialViewState={{ center, zoom }} />
           {children}
         </MapLibreMap>
-        {overlay}
-        {showLoader && !isLoaded && <DefaultLoader />}
+        {overlay ? (
+          <View pointerEvents="box-none" className="absolute inset-0" style={mapStyles.overlay}>
+            {overlay}
+          </View>
+        ) : null}
+        {showLoader && !isLoaded ? <DefaultLoader /> : null}
+        {chrome ? (
+          <View pointerEvents="box-none" style={mapStyles.chrome}>
+            {chrome}
+          </View>
+        ) : null}
       </View>
     </MapContext>
   );
 }
+
+const mapStyles = StyleSheet.create({
+  overlay: {
+    zIndex: 2,
+    elevation: 2,
+  },
+  chrome: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 1000,
+    elevation: 100,
+  },
+  controls: {
+    zIndex: 1001,
+    elevation: 101,
+  },
+  controlGroup: {
+    elevation: 8,
+  },
+});
 
 function anchorObjectToAnchorString(anchor: { x: number; y: number }) {
   const horizontal = anchor.x <= 0.25 ? 'left' : anchor.x >= 0.75 ? 'right' : 'center';
@@ -240,7 +291,9 @@ type MapControlsProps = {
   showZoom?: boolean;
   showLocate?: boolean;
   className?: string;
-  onLocate?: (coords: { longitude: number; latitude: number }) => void;
+  /** Called when the locate button is pressed. The callback is responsible for
+   *  getting the location and moving the camera. */
+  onLocate?: () => void | Promise<void>;
 };
 
 function MapControls({
@@ -251,54 +304,37 @@ function MapControls({
   onLocate,
 }: MapControlsProps) {
   const { cameraRef, mapRef } = useMap();
-  const [waitingForLocation, setWaitingForLocation] = useState(false);
-  const [currentZoom, setCurrentZoom] = useState(10);
+  const [isLocating, setIsLocating] = useState(false);
 
   const handleZoomIn = async () => {
-    if (cameraRef.current && mapRef.current) {
-      const center = await mapRef.current.getCenter();
-      const newZoom = Math.min(currentZoom + 1, 20);
-      setCurrentZoom(newZoom);
-      cameraRef.current.easeTo({
-        center: center, // LngLat is already [longitude, latitude]
-        zoom: newZoom,
-        duration: 300,
-      });
+    if (!cameraRef.current || !mapRef.current) return;
+    try {
+      const zoom = await mapRef.current.getZoom();
+      cameraRef.current.zoomTo(Math.min(zoom + 1, 20), { duration: 300 });
+    } catch (error) {
+      console.error('Error zooming in:', error);
     }
   };
 
   const handleZoomOut = async () => {
-    if (cameraRef.current && mapRef.current) {
-      const center = await mapRef.current.getCenter();
-      const newZoom = Math.max(currentZoom - 1, 0);
-      setCurrentZoom(newZoom);
-      cameraRef.current.easeTo({
-        center: center, // LngLat is already [longitude, latitude]
-        zoom: newZoom,
-        duration: 300,
-      });
+    if (!cameraRef.current || !mapRef.current) return;
+    try {
+      const zoom = await mapRef.current.getZoom();
+      cameraRef.current.zoomTo(Math.max(zoom - 1, 0), { duration: 300 });
+    } catch (error) {
+      console.error('Error zooming out:', error);
     }
   };
 
-  const handleLocate = async () => {
-    setWaitingForLocation(true);
+  const handleLocatePress = async () => {
+    if (!onLocate) return;
+    setIsLocating(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const pos = await Location.getCurrentPositionAsync({});
-      const coords = { longitude: pos.coords.longitude, latitude: pos.coords.latitude };
-      if (cameraRef.current) {
-        cameraRef.current.flyTo({
-          center: [coords.longitude, coords.latitude],
-          zoom: 14,
-          duration: 1500,
-        });
-      }
-      onLocate?.(coords);
+      await onLocate();
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.error('Error locating:', error);
     } finally {
-      setWaitingForLocation(false);
+      setIsLocating(false);
     }
   };
 
@@ -310,11 +346,16 @@ function MapControls({
   }[position];
 
   return (
-    <View className={cn('absolute gap-1.5', className)} style={positionStyle}>
+    <View
+      pointerEvents="box-none"
+      className={cn('absolute gap-1.5', className)}
+      style={[positionStyle, mapStyles.controls]}
+      collapsable={false}>
       {showZoom && (
         <View
           className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm"
-          style={{ elevation: 2 }}>
+          style={mapStyles.controlGroup}
+          collapsable={false}>
           <ControlButton onPress={handleZoomIn} label="+">
             <Text className="text-lg font-semibold text-gray-700">+</Text>
           </ControlButton>
@@ -327,9 +368,10 @@ function MapControls({
       {showLocate && (
         <View
           className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm"
-          style={{ elevation: 2 }}>
-          <ControlButton onPress={handleLocate} label="📍" disabled={waitingForLocation}>
-            {waitingForLocation ? (
+          style={mapStyles.controlGroup}
+          collapsable={false}>
+          <ControlButton onPress={handleLocatePress} label="locate" disabled={isLocating}>
+            {isLocating ? (
               <ActivityIndicator size="small" color="#666" />
             ) : (
               <Text className="text-lg font-semibold text-gray-700">📍</Text>
@@ -356,6 +398,7 @@ function ControlButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      hitSlop={8}
       className="h-8 w-8 items-center justify-center active:bg-gray-100"
       style={disabled ? { opacity: 0.5 } : undefined}
       accessibilityLabel={label}

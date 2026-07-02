@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
 import { toGeoJSON } from '@/lib/stations';
 import { Stack } from 'expo-router';
+import * as Location from 'expo-location';
 import { MoonStarIcon, SunIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
@@ -19,15 +20,32 @@ const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
 
 // ─── Map content (children of <Map>) ─────────────────────────────────────────
 function MapContent() {
-  const {
-    stations,
-    selectedStation,
-    route,
-    selectStation,
-  } = useStations();
+  const { stations, selectedStation, route, selectStation, setUserLocation } = useStations();
+  // Safe: MapContent is only ever rendered inside <Map>, which provides MapContext.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { cameraRef } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
+  const [hasPermission, setHasPermission] = React.useState(false);
+
+  React.useEffect(() => {
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      setHasPermission(status === 'granted');
+    });
+  }, []);
+
+  // Mirror live position updates (the blue dot source) into the shared context
+  // so that "Get Directions" knows where the user is without a manual locate tap.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const position = (mapComponents as NonNullable<typeof mapComponents>).useCurrentPosition({
+    enabled: hasPermission,
+  });
+  React.useEffect(() => {
+    if (position?.coords) {
+      setUserLocation([position.coords.longitude, position.coords.latitude]);
+    }
+  }, [position, setUserLocation]);
 
   if (!mapComponents) return null;
-  const { MapMarker, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
+  const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
 
   const geojson = React.useMemo(() => toGeoJSON(stations), [stations]);
 
@@ -40,9 +58,26 @@ function MapContent() {
     if (station) selectStation(station);
   };
 
+  const handleLocate = async () => {
+    if (!cameraRef.current) return;
+    try {
+      // Use the already-known position if available, otherwise fetch fresh.
+      const coords = position?.coords
+        ? { longitude: position.coords.longitude, latitude: position.coords.latitude }
+        : await Location.getCurrentPositionAsync({}).then((l) => l.coords);
+      cameraRef.current.flyTo({
+        center: [coords.longitude, coords.latitude],
+        zoom: 14,
+        duration: 1500,
+      });
+      setUserLocation([coords.longitude, coords.latitude]);
+    } catch (error) {
+      console.error('Location error:', error);
+    }
+  };
+
   return (
     <>
-      {/* All station circles via GeoJSON layer */}
       <GeoJSONSource id="stations-source" data={geojson} onPress={handleStationLayerPress}>
         <Layer
           id="stations-circles"
@@ -69,7 +104,6 @@ function MapContent() {
         />
       </GeoJSONSource>
 
-      {/* Highlighted marker for selected station */}
       {selectedStation && (
         <MapMarker coordinate={selectedStation.coordinates}>
           <View style={styles.selectedPin}>
@@ -78,48 +112,26 @@ function MapContent() {
         </MapMarker>
       )}
 
-      {/* Route polyline */}
       {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
 
-      {/* User location dot */}
-      <MapUserLocation autoRequestPermission />
+      {hasPermission && <MapUserLocation />}
 
+      <MapControls
+        showZoom
+        showLocate={hasPermission}
+        position="top-right"
+        onLocate={handleLocate}
+      />
     </>
   );
 }
 
-function MapOverlayContent() {
-  if (!mapComponents) return null;
-  const { MapControls } = mapComponents;
-  const { setUserLocation } = useStations();
-
-  const handleLocate = ({ longitude, latitude }: { longitude: number; latitude: number }) => {
-    setUserLocation([longitude, latitude]);
-  };
-
-  return (
-    <MapControls
-      showZoom
-      showLocate
-      position="bottom-right"
-      onLocate={handleLocate}
-    />
-  );
-}
-
-// ─── GeoJSON layer tap handler wrapper ───────────────────────────────────────
-// MapLibre's Layer doesn't expose onPress directly; we use a Pressable on the
-// map itself via onPress on the MapLibreMap. We handle it in a thin wrapper.
 function MapWithStations() {
   if (!mapComponents) return null;
   const { Map } = mapComponents;
 
   return (
-    <Map
-      zoom={12}
-      center={[51.39, 35.72]}
-      showLoader={false}
-      overlay={<MapOverlayContent />}>
+    <Map zoom={12} center={[51.39, 35.72]}>
       <MapContent />
     </Map>
   );
@@ -138,7 +150,7 @@ export default function Screen() {
           headerRight: () => <ThemeToggle />,
         }}
       />
-      <View style={styles.container}>
+      <View className="flex-1">
         {isMapLibreLinked ? (
           <MapWithStations />
         ) : (
@@ -155,10 +167,6 @@ export default function Screen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BLUE,
-  },
   mapFallback: {
     flex: 1,
     alignItems: 'center',
