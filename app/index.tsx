@@ -2,10 +2,9 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
-import { toGeoJSON } from '@/lib/stations';
 import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
-import { MoonStarIcon, SunIcon } from 'lucide-react-native';
+import { MoonStarIcon, SunIcon, TrainFrontIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
 import { Uniwind, useUniwind } from 'uniwind';
@@ -45,23 +44,11 @@ function MapContent() {
   }, [position, setUserLocation]);
 
   if (!mapComponents) return null;
-  const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
-
-  const geojson = React.useMemo(() => toGeoJSON(stations), [stations]);
-
-  const handleStationLayerPress = (event: {
-    nativeEvent?: { features?: Array<{ properties?: { id?: string } }> };
-  }) => {
-    const stationId = event.nativeEvent?.features?.[0]?.properties?.id;
-    if (!stationId) return;
-    const station = stations.find((s) => s.id === stationId);
-    if (station) selectStation(station);
-  };
+  const { MapMarker, MapControls, MapUserLocation, MapRoute } = mapComponents;
 
   const handleLocate = async () => {
     if (!cameraRef.current) return;
     try {
-      // Use the already-known position if available, otherwise fetch fresh.
       const coords = position?.coords
         ? { longitude: position.coords.longitude, latitude: position.coords.latitude }
         : await Location.getCurrentPositionAsync({}).then((l) => l.coords);
@@ -78,39 +65,28 @@ function MapContent() {
 
   return (
     <>
-      <GeoJSONSource id="stations-source" data={geojson} onPress={handleStationLayerPress}>
-        <Layer
-          id="stations-circles"
-          type="circle"
-          style={{
-            circleRadius: 10,
-            circleColor: ['get', 'lineColor'],
-            circleOpacity: 0.85,
-            circleStrokeWidth: 2,
-            circleStrokeColor: '#ffffff',
-          }}
-        />
-        <Layer
-          id="stations-labels"
-          type="symbol"
-          style={{
-            textField: ['get', 'nameFa'],
-            textSize: 11,
-            textColor: '#ffffff',
-            textHaloColor: '#000000',
-            textHaloWidth: 1,
-            textOffset: [0, 2],
-          }}
-        />
-      </GeoJSONSource>
-
-      {selectedStation && (
-        <MapMarker coordinate={selectedStation.coordinates}>
-          <View style={styles.selectedPin}>
-            <View style={styles.selectedPinInner} />
-          </View>
-        </MapMarker>
-      )}
+      {stations.map((station) => {
+        const isSelected = selectedStation?.id === station.id;
+        return (
+          <MapMarker
+            key={station.id}
+            coordinate={station.coordinates}
+            onPress={() => selectStation(station)}>
+            <View
+              style={[
+                markerStyles.pin,
+                { backgroundColor: station.lineColor },
+                isSelected && markerStyles.pinSelected,
+              ]}>
+              <TrainFrontIcon
+                size={isSelected ? 14 : 11}
+                color="#ffffff"
+                strokeWidth={2.5}
+              />
+            </View>
+          </MapMarker>
+        );
+      })}
 
       {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
 
@@ -178,22 +154,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
   },
-  selectedPin: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#3b82f6',
-    borderWidth: 3,
+});
+
+const markerStyles = StyleSheet.create({
+  pin: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    elevation: 3,
   },
-  selectedPinInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
+  pinSelected: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 3,
+    elevation: 6,
   },
 });
 

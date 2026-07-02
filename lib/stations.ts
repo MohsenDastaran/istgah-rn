@@ -1,97 +1,39 @@
+import { stations as rawStations } from '@/assets/data/stations';
+import { lineColors, lineNames } from '@/assets/data/metroLines';
+
 export type Station = {
   id: string;
   name: { en: string; fa: string };
+  /** Primary line key, e.g. "1", "2", "1,3" for interchange stations */
+  lineKey: string;
+  /** Human-readable label for the primary line */
   line: string;
+  /** Hex colour for the primary line (or first line for interchanges) */
   lineColor: string;
   coordinates: [number, number]; // [longitude, latitude]
+  isActive: boolean;
 };
 
-export const STATIONS: Station[] = [
-  {
-    id: 'teh-1',
-    name: { en: 'Imam Khomeini', fa: 'امام خمینی' },
-    line: 'Line 1',
-    lineColor: '#e63946',
-    coordinates: [51.4197, 35.6814],
-  },
-  {
-    id: 'teh-2',
-    name: { en: 'Mellat Park', fa: 'پارک ملت' },
-    line: 'Line 1',
-    lineColor: '#e63946',
-    coordinates: [51.4087, 35.7609],
-  },
-  {
-    id: 'teh-3',
-    name: { en: 'Tajrish', fa: 'تجریش' },
-    line: 'Line 1',
-    lineColor: '#e63946',
-    coordinates: [51.4317, 35.8069],
-  },
-  {
-    id: 'teh-4',
-    name: { en: 'Mirdamad', fa: 'میرداماد' },
-    line: 'Line 1',
-    lineColor: '#e63946',
-    coordinates: [51.4362, 35.7597],
-  },
-  {
-    id: 'teh-5',
-    name: { en: 'Sadeghieh', fa: 'صادقیه' },
-    line: 'Line 2',
-    lineColor: '#457b9d',
-    coordinates: [51.3296, 35.7197],
-  },
-  {
-    id: 'teh-6',
-    name: { en: 'Navvab', fa: 'نواب' },
-    line: 'Line 2',
-    lineColor: '#457b9d',
-    coordinates: [51.3819, 35.7081],
-  },
-  {
-    id: 'teh-7',
-    name: { en: 'Shahid Beheshti', fa: 'شهید بهشتی' },
-    line: 'Line 2',
-    lineColor: '#457b9d',
-    coordinates: [51.4512, 35.7298],
-  },
-  {
-    id: 'teh-8',
-    name: { en: 'Shahid Hemmat', fa: 'شهید همت' },
-    line: 'Line 3',
-    lineColor: '#2a9d8f',
-    coordinates: [51.3744, 35.7483],
-  },
-  {
-    id: 'teh-9',
-    name: { en: 'Azadegan', fa: 'آزادگان' },
-    line: 'Line 4',
-    lineColor: '#e9c46a',
-    coordinates: [51.3131, 35.6742],
-  },
-  {
-    id: 'teh-10',
-    name: { en: 'Ershad', fa: 'ارشاد' },
-    line: 'Line 4',
-    lineColor: '#e9c46a',
-    coordinates: [51.3483, 35.6869],
-  },
-  {
-    id: 'teh-11',
-    name: { en: 'Tehran Railway Station', fa: 'راه آهن' },
-    line: 'Line 5',
-    lineColor: '#f4a261',
-    coordinates: [51.3819, 35.6683],
-  },
-  {
-    id: 'teh-12',
-    name: { en: 'Mohammadiyeh', fa: 'محمدیه' },
-    line: 'Line 1',
-    lineColor: '#e63946',
-    coordinates: [51.4261, 35.6714],
-  },
-];
+/** Derive the primary line key from a "Line(s)" string like "1" or "1,3". */
+function primaryLine(lineStr: string): string {
+  return lineStr.split(',')[0].trim();
+}
+
+export const STATIONS: Station[] = rawStations
+  .filter((s) => s['Is Active'] === 'T')
+  .map((s) => {
+    const lineKey = s['Line(s)'];
+    const primary = primaryLine(lineKey);
+    return {
+      id: s.ID,
+      name: { en: s['Name English'], fa: s['Name Persian'] },
+      lineKey,
+      line: (lineNames as Record<string, string>)[primary] ?? `Line ${primary}`,
+      lineColor: (lineColors as Record<string, string>)[primary] ?? '#888888',
+      coordinates: [parseFloat(s.Longitude), parseFloat(s.Latitude)],
+      isActive: true,
+    };
+  });
 
 export function toGeoJSON(stations: Station[]) {
   return {
