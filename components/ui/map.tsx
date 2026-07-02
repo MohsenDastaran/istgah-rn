@@ -44,6 +44,8 @@ type MapStyleOption = string | StyleSpecification;
 
 type MapProps = {
   children?: ReactNode;
+  /** React overlay rendered above the native map. */
+  overlay?: ReactNode;
   /** Custom map styles for light and dark themes. Overrides the default Carto styles. */
   styles?: {
     light?: MapStyleOption;
@@ -59,8 +61,6 @@ type MapProps = {
   showLoader?: boolean;
   /** Called when the map is pressed. */
   onPress?: (event: unknown) => void;
-  /** Layer ids included in press feature queries. */
-  queryLayerIds?: string[];
 };
 
 const DefaultLoader = () => (
@@ -71,13 +71,13 @@ const DefaultLoader = () => (
 
 function Map({
   children,
+  overlay,
   styles,
   center = [0, 0],
   zoom = 10,
   className,
   showLoader = true,
   onPress,
-  queryLayerIds,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const cameraRef = useRef<CameraRef | null>(null);
@@ -103,13 +103,13 @@ function Map({
           mapStyle={mapStyle}
           onDidFinishLoadingMap={handleMapIdle}
           onPress={onPress}
-          queryLayerIds={queryLayerIds}
           compass={false}
           logo={false}
           attribution={false}>
           <Camera ref={cameraRef} zoom={zoom} center={center} easing="fly" duration={1000} />
           {children}
         </MapLibreMap>
+        {overlay}
         {showLoader && !isLoaded && <DefaultLoader />}
       </View>
     </MapContext>
@@ -250,7 +250,7 @@ function MapControls({
   className,
   onLocate,
 }: MapControlsProps) {
-  const { cameraRef, mapRef, isLoaded } = useMap();
+  const { cameraRef, mapRef } = useMap();
   const [waitingForLocation, setWaitingForLocation] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(10);
 
@@ -302,8 +302,6 @@ function MapControls({
     }
   };
 
-  if (!isLoaded) return null;
-
   const positionStyle = {
     'top-left': { top: 8, left: 8 },
     'top-right': { top: 8, right: 8 },
@@ -320,7 +318,7 @@ function MapControls({
           <ControlButton onPress={handleZoomIn} label="+">
             <Text className="text-lg font-semibold text-gray-700">+</Text>
           </ControlButton>
-          <View className="h-[1px] bg-gray-200" />
+          <View className="h-px bg-gray-200" />
           <ControlButton onPress={handleZoomOut} label="-">
             <Text className="text-lg font-semibold text-gray-700">−</Text>
           </ControlButton>

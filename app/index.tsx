@@ -24,22 +24,26 @@ function MapContent() {
     selectedStation,
     route,
     selectStation,
-    setUserLocation,
   } = useStations();
 
   if (!mapComponents) return null;
-  const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
+  const { MapMarker, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
 
   const geojson = React.useMemo(() => toGeoJSON(stations), [stations]);
 
-  const handleLocate = ({ longitude, latitude }: { longitude: number; latitude: number }) => {
-    setUserLocation([longitude, latitude]);
+  const handleStationLayerPress = (event: {
+    nativeEvent?: { features?: Array<{ properties?: { id?: string } }> };
+  }) => {
+    const stationId = event.nativeEvent?.features?.[0]?.properties?.id;
+    if (!stationId) return;
+    const station = stations.find((s) => s.id === stationId);
+    if (station) selectStation(station);
   };
 
   return (
     <>
       {/* All station circles via GeoJSON layer */}
-      <GeoJSONSource id="stations-source" data={geojson}>
+      <GeoJSONSource id="stations-source" data={geojson} onPress={handleStationLayerPress}>
         <Layer
           id="stations-circles"
           type="circle"
@@ -80,14 +84,26 @@ function MapContent() {
       {/* User location dot */}
       <MapUserLocation autoRequestPermission />
 
-      {/* Zoom + locate controls */}
-      <MapControls
-        showZoom
-        showLocate
-        position="bottom-right"
-        onLocate={handleLocate}
-      />
     </>
+  );
+}
+
+function MapOverlayContent() {
+  if (!mapComponents) return null;
+  const { MapControls } = mapComponents;
+  const { setUserLocation } = useStations();
+
+  const handleLocate = ({ longitude, latitude }: { longitude: number; latitude: number }) => {
+    setUserLocation([longitude, latitude]);
+  };
+
+  return (
+    <MapControls
+      showZoom
+      showLocate
+      position="bottom-right"
+      onLocate={handleLocate}
+    />
   );
 }
 
@@ -97,21 +113,13 @@ function MapContent() {
 function MapWithStations() {
   if (!mapComponents) return null;
   const { Map } = mapComponents;
-  const { selectStation, stations } = useStations();
-
-  const handleMapPress = (e: { features?: Array<{ properties?: { id?: string } }> }) => {
-    const feature = e.features?.[0];
-    if (!feature?.properties?.id) return;
-    const station = stations.find((s) => s.id === feature.properties!.id!);
-    if (station) selectStation(station);
-  };
 
   return (
     <Map
       zoom={12}
       center={[51.39, 35.72]}
-      onPress={handleMapPress}
-      queryLayerIds={['stations-circles']}>
+      showLoader={false}
+      overlay={<MapOverlayContent />}>
       <MapContent />
     </Map>
   );
