@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
+import { METRO_NETWORK_GEOJSON, type Station } from '@/lib/stations';
 import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { MoonStarIcon, SunIcon, TrainFrontIcon } from 'lucide-react-native';
@@ -9,13 +10,52 @@ import * as React from 'react';
 import { StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
 import { Uniwind, useUniwind } from 'uniwind';
 
-const BLUE = '#3784d7';
-
 const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
 const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').SheetSection : null;
 
 const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
 const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
+
+// ─── Memoized station pin — only re-renders when its own props change ─────────
+type StationMarkerProps = {
+  station: Station;
+  isSelected: boolean;
+  // Passing the component itself avoids a module-level import dependency
+  MapMarker: React.ComponentType<{
+    coordinate: [number, number];
+    onPress?: () => void;
+    children?: React.ReactNode;
+  }>;
+  selectStation: (s: Station) => void;
+};
+
+const StationMarker = React.memo(function StationMarker({
+  station,
+  isSelected,
+  MapMarker,
+  selectStation,
+}: StationMarkerProps) {
+  const handlePress = React.useCallback(
+    () => selectStation(station),
+    [station, selectStation],
+  );
+  return (
+    <MapMarker coordinate={station.coordinates} onPress={handlePress}>
+      <View
+        style={[
+          markerStyles.pin,
+          { backgroundColor: station.lineColor },
+          isSelected && markerStyles.pinSelected,
+        ]}>
+        <TrainFrontIcon
+          size={isSelected ? 14 : 11}
+          color="#ffffff"
+          strokeWidth={2.5}
+        />
+      </View>
+    </MapMarker>
+  );
+});
 
 // ─── Map content (children of <Map>) ─────────────────────────────────────────
 function MapContent() {
@@ -44,7 +84,7 @@ function MapContent() {
   }, [position, setUserLocation]);
 
   if (!mapComponents) return null;
-  const { MapMarker, MapControls, MapUserLocation, MapRoute } = mapComponents;
+  const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
 
   const handleLocate = async () => {
     if (!cameraRef.current) return;
@@ -65,28 +105,31 @@ function MapContent() {
 
   return (
     <>
-      {stations.map((station) => {
-        const isSelected = selectedStation?.id === station.id;
-        return (
-          <MapMarker
-            key={station.id}
-            coordinate={station.coordinates}
-            onPress={() => selectStation(station)}>
-            <View
-              style={[
-                markerStyles.pin,
-                { backgroundColor: station.lineColor },
-                isSelected && markerStyles.pinSelected,
-              ]}>
-              <TrainFrontIcon
-                size={isSelected ? 14 : 11}
-                color="#ffffff"
-                strokeWidth={2.5}
-              />
-            </View>
-          </MapMarker>
-        );
-      })}
+      {/* Metro network — single GeoJSON source handles all segments & branches */}
+      <GeoJSONSource id="metro-network" data={METRO_NETWORK_GEOJSON}>
+        <Layer
+          id="metro-lines"
+          type="line"
+          style={{
+            lineColor: ['get', 'color'],
+            lineWidth: 3,
+            lineOpacity: 0.85,
+            lineJoin: 'round',
+            lineCap: 'round',
+          }}
+        />
+      </GeoJSONSource>
+
+      {/* Station markers — memoized so only the selected/deselected pair re-renders */}
+      {stations.map((station) => (
+        <StationMarker
+          key={station.id}
+          station={station}
+          isSelected={selectedStation?.id === station.id}
+          MapMarker={MapMarker}
+          selectStation={selectStation}
+        />
+      ))}
 
       {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
 
