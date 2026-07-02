@@ -19,7 +19,7 @@ const translations = {
     locateYourselfFirst: 'Locate yourself first',
     clearRoute: 'Clear Route',
     backToList: 'Back to List',
-    openInGoogleMaps: 'Open in Google Maps',
+    openInMaps: 'Open in Maps',
   },
   fa: {
     appName: 'ایستگاه',
@@ -36,7 +36,7 @@ const translations = {
     locateYourselfFirst: 'موقعیت شما یافت نشد',
     clearRoute: 'حذف مسیر',
     backToList: 'بازگشت به لیست',
-    openInGoogleMaps: 'باز کردن در گوگل مپ',
+    openInMaps: 'باز کردن در نقشه',
   },
 } as const;
 

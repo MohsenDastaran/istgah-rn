@@ -5,7 +5,7 @@ import {
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
 import { useI18n } from '@/lib/i18n';
-import { openGoogleMapsDirections } from '@/lib/maps';
+import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
 import {
@@ -290,9 +290,10 @@ const StationDetail = ({
     sheetRef.current?.resize(2);
   };
 
-  const handleOpenGoogleMaps = () => {
+  const handleOpenMaps = () => {
     const [lng, lat] = station.coordinates;
-    openGoogleMapsDirections(lat, lng);
+    const label = isRTL ? station.name.fa : station.name.en;
+    openMapsDirections(lat, lng, label);
   };
 
   const handleClose = () => {
@@ -350,11 +351,11 @@ const StationDetail = ({
             hint={!userLocation ? t.locateYourselfFirst : undefined}
           />
           <SheetButton
-            text={t.openInGoogleMaps}
+            text={t.openInMaps}
             icon={ExternalLink}
             isRTL={isRTL}
             variant="secondary"
-            onPress={handleOpenGoogleMaps}
+            onPress={handleOpenMaps}
           />
         </>
       )}
