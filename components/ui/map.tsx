@@ -13,6 +13,7 @@ import {
   type MapRef,
   type StyleSpecification,
 } from '@maplibre/maplibre-react-native';
+import * as Location from 'expo-location';
 import { createContext, use, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useUniwind } from 'uniwind';
@@ -56,6 +57,10 @@ type MapProps = {
   className?: string;
   /** Show loading indicator */
   showLoader?: boolean;
+  /** Called when the map is pressed. */
+  onPress?: (event: unknown) => void;
+  /** Layer ids included in press feature queries. */
+  queryLayerIds?: string[];
 };
 
 const DefaultLoader = () => (
@@ -71,6 +76,8 @@ function Map({
   zoom = 10,
   className,
   showLoader = true,
+  onPress,
+  queryLayerIds,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const cameraRef = useRef<CameraRef | null>(null);
@@ -95,6 +102,8 @@ function Map({
           style={{ flex: 1 }}
           mapStyle={mapStyle}
           onDidFinishLoadingMap={handleMapIdle}
+          onPress={onPress}
+          queryLayerIds={queryLayerIds}
           compass={false}
           logo={false}
           attribution={false}>
@@ -274,18 +283,18 @@ function MapControls({
   const handleLocate = async () => {
     setWaitingForLocation(true);
     try {
-      // Location handling would need native permissions setup
-      // This is a simplified version
-      if (cameraRef.current && onLocate) {
-        // You would get actual location here
-        const coords = { longitude: 0, latitude: 0 };
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const pos = await Location.getCurrentPositionAsync({});
+      const coords = { longitude: pos.coords.longitude, latitude: pos.coords.latitude };
+      if (cameraRef.current) {
         cameraRef.current.flyTo({
           center: [coords.longitude, coords.latitude],
           zoom: 14,
           duration: 1500,
         });
-        onLocate(coords);
       }
+      onLocate?.(coords);
     } catch (error) {
       console.error('Error getting location:', error);
     } finally {
@@ -487,7 +496,7 @@ function MapUserLocation({
 }
 
 // Re-export LocationManager for permission handling
-export { LocationManager };
+export { GeoJSONSource, Layer, LocationManager };
 
 export {
   Map,

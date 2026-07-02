@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
+import { useStations } from '@/lib/stations-context';
+import { toGeoJSON } from '@/lib/stations';
 import { Stack } from 'expo-router';
 import { MoonStarIcon, SunIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -13,8 +15,109 @@ const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
 const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').SheetSection : null;
 
 const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
-const Map = isMapLibreLinked ? require('@/components/ui/map').Map : null;
+const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
 
+// ─── Map content (children of <Map>) ─────────────────────────────────────────
+function MapContent() {
+  const {
+    stations,
+    selectedStation,
+    route,
+    selectStation,
+    setUserLocation,
+  } = useStations();
+
+  if (!mapComponents) return null;
+  const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
+
+  const geojson = React.useMemo(() => toGeoJSON(stations), [stations]);
+
+  const handleLocate = ({ longitude, latitude }: { longitude: number; latitude: number }) => {
+    setUserLocation([longitude, latitude]);
+  };
+
+  return (
+    <>
+      {/* All station circles via GeoJSON layer */}
+      <GeoJSONSource id="stations-source" data={geojson}>
+        <Layer
+          id="stations-circles"
+          type="circle"
+          style={{
+            circleRadius: 10,
+            circleColor: ['get', 'lineColor'],
+            circleOpacity: 0.85,
+            circleStrokeWidth: 2,
+            circleStrokeColor: '#ffffff',
+          }}
+        />
+        <Layer
+          id="stations-labels"
+          type="symbol"
+          style={{
+            textField: ['get', 'nameFa'],
+            textSize: 11,
+            textColor: '#ffffff',
+            textHaloColor: '#000000',
+            textHaloWidth: 1,
+            textOffset: [0, 2],
+          }}
+        />
+      </GeoJSONSource>
+
+      {/* Highlighted marker for selected station */}
+      {selectedStation && (
+        <MapMarker coordinate={selectedStation.coordinates}>
+          <View style={styles.selectedPin}>
+            <View style={styles.selectedPinInner} />
+          </View>
+        </MapMarker>
+      )}
+
+      {/* Route polyline */}
+      {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
+
+      {/* User location dot */}
+      <MapUserLocation autoRequestPermission />
+
+      {/* Zoom + locate controls */}
+      <MapControls
+        showZoom
+        showLocate
+        position="bottom-right"
+        onLocate={handleLocate}
+      />
+    </>
+  );
+}
+
+// ─── GeoJSON layer tap handler wrapper ───────────────────────────────────────
+// MapLibre's Layer doesn't expose onPress directly; we use a Pressable on the
+// map itself via onPress on the MapLibreMap. We handle it in a thin wrapper.
+function MapWithStations() {
+  if (!mapComponents) return null;
+  const { Map } = mapComponents;
+  const { selectStation, stations } = useStations();
+
+  const handleMapPress = (e: { features?: Array<{ properties?: { id?: string } }> }) => {
+    const feature = e.features?.[0];
+    if (!feature?.properties?.id) return;
+    const station = stations.find((s) => s.id === feature.properties!.id!);
+    if (station) selectStation(station);
+  };
+
+  return (
+    <Map
+      zoom={12}
+      center={[51.39, 35.72]}
+      onPress={handleMapPress}
+      queryLayerIds={['stations-circles']}>
+      <MapContent />
+    </Map>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function Screen() {
   const { t } = useI18n();
 
@@ -28,8 +131,8 @@ export default function Screen() {
         }}
       />
       <View style={styles.container}>
-        {Map ? (
-          <Map zoom={12} center={[-122.4194, 37.7749]} />
+        {isMapLibreLinked ? (
+          <MapWithStations />
         ) : (
           <View style={styles.mapFallback}>
             <Text style={styles.mapFallbackText}>
@@ -58,6 +161,23 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     fontSize: 14,
+  },
+  selectedPin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#3b82f6',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+  },
+  selectedPinInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
   },
 });
 
