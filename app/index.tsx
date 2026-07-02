@@ -119,7 +119,7 @@ function MapContent() {
       <MapControls
         showZoom
         showLocate={hasPermission}
-        position="top-right"
+        position="bottom-right"
         onLocate={handleLocate}
       />
     </>

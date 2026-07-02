@@ -23,7 +23,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useUniwind } from 'uniwind';
 
 type MapContextValue = {
@@ -54,10 +54,6 @@ type MapStyleOption = string | StyleSpecification;
 
 type MapProps = {
   children?: ReactNode;
-  /** Screen-level UI (sheet, controls) rendered above the map with a high z-index. */
-  chrome?: ReactNode;
-  /** React overlay rendered above the native map. */
-  overlay?: ReactNode;
   /** Custom map styles for light and dark themes. Overrides the default Carto styles. */
   styles?: {
     light?: MapStyleOption;
@@ -76,18 +72,13 @@ type MapProps = {
 };
 
 const DefaultLoader = () => (
-  <View
-    pointerEvents="none"
-    className="absolute inset-0 items-center justify-center bg-white/50"
-    style={{ zIndex: 1 }}>
+  <View pointerEvents="none" className="absolute inset-0 items-center justify-center bg-white/50">
     <ActivityIndicator size="small" color="#999" />
   </View>
 );
 
 function Map({
   children,
-  chrome,
-  overlay,
   styles,
   center = [0, 0],
   zoom = 10,
@@ -116,12 +107,11 @@ function Map({
 
   return (
     <MapContext value={{ mapRef, cameraRef, isLoaded, theme }}>
-      <View className={cn('relative flex-1', className)} pointerEvents="box-none">
+      <View className={cn('relative flex-1', className)}>
         <MapLibreMap
           ref={mapRef}
           style={{ flex: 1 }}
           mapStyle={mapStyle}
-          androidView={Platform.OS === 'android' ? 'texture' : undefined}
           onDidFinishLoadingMap={markLoaded}
           onDidFinishLoadingStyle={markLoaded}
           onDidFinishRenderingMapFully={markLoaded}
@@ -129,43 +119,14 @@ function Map({
           compass={false}
           logo={false}
           attribution={false}>
-          <Camera ref={cameraRef} initialViewState={{ center, zoom }} />
+          <Camera ref={cameraRef} zoom={zoom} center={center} easing="fly" duration={1000} />
           {children}
         </MapLibreMap>
-        {overlay ? (
-          <View pointerEvents="box-none" className="absolute inset-0" style={mapStyles.overlay}>
-            {overlay}
-          </View>
-        ) : null}
         {showLoader && !isLoaded ? <DefaultLoader /> : null}
-        {chrome ? (
-          <View pointerEvents="box-none" style={mapStyles.chrome}>
-            {chrome}
-          </View>
-        ) : null}
       </View>
     </MapContext>
   );
 }
-
-const mapStyles = StyleSheet.create({
-  overlay: {
-    zIndex: 2,
-    elevation: 2,
-  },
-  chrome: {
-    ...StyleSheet.absoluteFill,
-    zIndex: 1000,
-    elevation: 100,
-  },
-  controls: {
-    zIndex: 1001,
-    elevation: 101,
-  },
-  controlGroup: {
-    elevation: 8,
-  },
-});
 
 function anchorObjectToAnchorString(anchor: { x: number; y: number }) {
   const horizontal = anchor.x <= 0.25 ? 'left' : anchor.x >= 0.75 ? 'right' : 'center';
@@ -341,21 +302,16 @@ function MapControls({
   const positionStyle = {
     'top-left': { top: 8, left: 8 },
     'top-right': { top: 8, right: 8 },
-    'bottom-left': { bottom: 8, left: 8 },
-    'bottom-right': { bottom: 8, right: 8 },
+    'bottom-left': { bottom: 200, left: 23 },
+    'bottom-right': { bottom: 200, right: 23 },
   }[position];
 
   return (
-    <View
-      pointerEvents="box-none"
-      className={cn('absolute gap-1.5', className)}
-      style={[positionStyle, mapStyles.controls]}
-      collapsable={false}>
+    <View className={cn('absolute gap-1.5', className)} style={positionStyle}>
       {showZoom && (
         <View
           className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm"
-          style={mapStyles.controlGroup}
-          collapsable={false}>
+          style={{ elevation: 2 }}>
           <ControlButton onPress={handleZoomIn} label="+">
             <Text className="text-lg font-semibold text-gray-700">+</Text>
           </ControlButton>
@@ -368,8 +324,7 @@ function MapControls({
       {showLocate && (
         <View
           className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm"
-          style={mapStyles.controlGroup}
-          collapsable={false}>
+          style={{ elevation: 2 }}>
           <ControlButton onPress={handleLocatePress} label="locate" disabled={isLocating}>
             {isLocating ? (
               <ActivityIndicator size="small" color="#666" />
