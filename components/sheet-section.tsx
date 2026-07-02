@@ -8,6 +8,14 @@ import { useI18n } from '@/lib/i18n';
 import { openGoogleMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
+  Navigation2,
+  RouteOff,
+  type LucideIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
 import {
   ActivityIndicator,
@@ -95,9 +103,20 @@ interface SheetButtonProps extends PressableProps {
   hint?: string;
   loading?: boolean;
   variant?: 'primary' | 'secondary';
+  icon?: LucideIcon;
+  isRTL?: boolean;
 }
 
-const SheetButton = ({ text, hint, loading, style, variant = 'primary', ...rest }: SheetButtonProps) => (
+const SheetButton = ({
+  text,
+  hint,
+  loading,
+  style,
+  variant = 'primary',
+  icon: Icon,
+  isRTL = false,
+  ...rest
+}: SheetButtonProps) => (
   <Pressable
     style={(state) => [
       btnStyles.button,
@@ -105,11 +124,15 @@ const SheetButton = ({ text, hint, loading, style, variant = 'primary', ...rest 
       state.pressed && btnStyles.pressed,
       typeof style === 'function' ? style(state) : style,
     ]}
-    {...rest}
-  >
-    <Text style={[btnStyles.text, variant === 'secondary' && btnStyles.secondaryText]}>
-      {text}
-    </Text>
+    {...rest}>
+    <View style={[btnStyles.content, isRTL && btnStyles.contentRTL]}>
+      {Icon && (
+        <Icon size={18} color={variant === 'secondary' ? LIGHT_GRAY : '#fff'} strokeWidth={2.25} />
+      )}
+      <Text style={[btnStyles.text, variant === 'secondary' && btnStyles.secondaryText]}>
+        {text}
+      </Text>
+    </View>
     {hint && <Text style={btnStyles.hint}>{hint}</Text>}
     {loading && <ActivityIndicator style={btnStyles.loader} size="small" color="#fff" />}
   </Pressable>
@@ -123,6 +146,14 @@ const btnStyles = StyleSheet.create({
     backgroundColor: DARK_BLUE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  contentRTL: {
+    flexDirection: 'row-reverse',
   },
   secondary: {
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -156,10 +187,15 @@ const StationRow = ({
 }) => (
   <Pressable
     onPress={onPress}
-    style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}
-  >
+    style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
     <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
-      <View style={[rowStyles.dot, { backgroundColor: station.lineColor }]} />
+      <View
+        style={[
+          rowStyles.dot,
+          { backgroundColor: station.lineColor },
+          !station.isActive && rowStyles.dotInactive,
+        ]}
+      />
       <View style={[rowStyles.textWrap, isRTL && rowStyles.textWrapRTL]}>
         <Text style={rowStyles.name}>{isRTL ? station.name.fa : station.name.en}</Text>
         <Text style={rowStyles.line}>{station.line}</Text>
@@ -178,6 +214,7 @@ const rowStyles = StyleSheet.create({
   inner: { flexDirection: 'row', alignItems: 'center', gap: GAP },
   innerRTL: { flexDirection: 'row-reverse' },
   dot: { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },
+  dotInactive: { opacity: 0.55 },
   textWrap: { flex: 1 },
   textWrapRTL: { alignItems: 'flex-end' },
   name: { color: '#fff', fontSize: 14, fontWeight: '500' },
@@ -268,14 +305,26 @@ const StationDetail = ({
     <View style={{ gap: GAP }}>
       {/* Station header */}
       <View style={[detailStyles.header, isRTL && detailStyles.headerRTL]}>
-        <View style={[detailStyles.dot, { backgroundColor: station.lineColor }]} />
+        <View
+          style={[
+            detailStyles.dot,
+            { backgroundColor: station.lineColor },
+            !station.isActive && detailStyles.dotInactive,
+          ]}
+        />
         <View style={[detailStyles.textWrap, isRTL && detailStyles.textWrapRTL]}>
-          <Text style={detailStyles.name}>
-            {isRTL ? station.name.fa : station.name.en}
-          </Text>
+          <Text style={detailStyles.name}>{isRTL ? station.name.fa : station.name.en}</Text>
           <Text style={detailStyles.line}>{station.line}</Text>
         </View>
       </View>
+
+      {/* {!station.isActive && (
+        <View style={[detailStyles.notice, isRTL && detailStyles.noticeRTL]}>
+          <Text style={[detailStyles.noticeText, isRTL && detailStyles.noticeTextRTL]}>
+            {t.stationMayNotBeFinished}
+          </Text>
+        </View>
+      )} */}
 
       {/* Route info */}
       {route && routeDistance != null && routeDuration != null && (
@@ -293,6 +342,8 @@ const StationDetail = ({
         <>
           <SheetButton
             text={t.getDirections}
+            icon={Navigation2}
+            isRTL={isRTL}
             loading={routeLoading}
             disabled={!userLocation || routeLoading}
             onPress={handleDirections}
@@ -300,6 +351,8 @@ const StationDetail = ({
           />
           <SheetButton
             text={t.openInGoogleMaps}
+            icon={ExternalLink}
+            isRTL={isRTL}
             variant="secondary"
             onPress={handleOpenGoogleMaps}
           />
@@ -310,6 +363,8 @@ const StationDetail = ({
       {route && (
         <SheetButton
           text={t.clearRoute}
+          icon={RouteOff}
+          isRTL={isRTL}
           variant="secondary"
           onPress={clearRoute}
         />
@@ -318,6 +373,8 @@ const StationDetail = ({
       {/* Back to list */}
       <SheetButton
         text={t.backToList}
+        icon={isRTL ? ArrowRight : ArrowLeft}
+        isRTL={isRTL}
         variant="secondary"
         onPress={handleClose}
       />
@@ -329,10 +386,22 @@ const detailStyles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: GAP, marginBottom: SPACING / 2 },
   headerRTL: { flexDirection: 'row-reverse' },
   dot: { width: 18, height: 18, borderRadius: 9, flexShrink: 0 },
+  dotInactive: { opacity: 0.55 },
   textWrap: { flex: 1 },
   textWrapRTL: { alignItems: 'flex-end' },
   name: { color: '#fff', fontSize: 18, fontWeight: '600' },
   line: { color: GRAY, fontSize: 13, marginTop: 2 },
+  notice: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderWidth: 1,
+    borderRadius: SPACING,
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING * 0.75,
+  },
+  noticeRTL: { alignItems: 'flex-end' },
+  noticeText: { color: '#fbbf24', fontSize: 13, lineHeight: 18 },
+  noticeTextRTL: { textAlign: 'right' },
 });
 
 // ─── Animated floating button ─────────────────────────────────────────────────
@@ -344,13 +413,8 @@ const SheetSectionInner = () => {
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
   const { t, isRTL, lang, setLang } = useI18n();
-  const {
-    filteredStations,
-    selectedStation,
-    selectStation,
-    searchQuery,
-    setSearchQuery,
-  } = useStations();
+  const { filteredStations, selectedStation, selectStation, searchQuery, setSearchQuery } =
+    useStations();
 
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
@@ -385,10 +449,10 @@ const SheetSectionInner = () => {
         ref={sheetRef}
         detents={[minHeight / height, 'auto', 1]}
         initialDetentIndex={0}
-        dimmedDetentIndex={2}
+        dimmed={false}
+        dismissible={false}
         style={contentStyle}
         detached
-        dismissible={false}
         backgroundColor={DARK}
         header={
           <SheetHeader
@@ -397,8 +461,7 @@ const SheetSectionInner = () => {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-        }
-      >
+        }>
         {/* ── Station detail view ── */}
         {selectedStation ? (
           <StationDetail station={selectedStation} isRTL={isRTL} sheetRef={sheetRef} />
@@ -415,11 +478,7 @@ const SheetSectionInner = () => {
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               renderItem={({ item }) => (
-                <StationRow
-                  station={item}
-                  isRTL={isRTL}
-                  onPress={() => handleStationPress(item)}
-                />
+                <StationRow station={item} isRTL={isRTL} onPress={() => handleStationPress(item)} />
               )}
               style={{ maxHeight: 280 }}
             />

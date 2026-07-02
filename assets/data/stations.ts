@@ -1388,7 +1388,7 @@ export const stations: Station[] = [
     'Line(s)': '6',
     Previous: '115',
     Next: '117',
-    'Is Active': 'F',
+    'Is Active': 'T',
   },
   {
     ID: '117',
@@ -1443,7 +1443,7 @@ export const stations: Station[] = [
     'Line(s)': '6',
     Previous: '120',
     Next: '122',
-    'Is Active': 'F',
+    'Is Active': 'T',
   },
   {
     ID: '122',
@@ -1454,7 +1454,7 @@ export const stations: Station[] = [
     'Line(s)': '6',
     Previous: '121',
     Next: '124',
-    'Is Active': 'F',
+    'Is Active': 'T',
   },
   // {
   //   ID: "123",
@@ -1474,7 +1474,7 @@ export const stations: Station[] = [
     Latitude: '35.5856765',
     Longitude: '51.4355401',
     'Line(s)': '6',
-    Previous: '123',
+    Previous: '122',
     Next: '-1',
     'Is Active': 'F',
   },
@@ -1685,6 +1685,6 @@ export const stations: Station[] = [
     'Line(s)': '7',
     Previous: '139',
     Next: '-1',
-    'Is Active': 'F',
+    'Is Active': 'T',
   },
 ];

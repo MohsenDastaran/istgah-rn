@@ -70,13 +70,18 @@ const MapLayers = React.memo(function MapLayers({
 
   const stationCircleStyle = React.useMemo(
     () => ({
-      circleColor: ['get', 'lineColor'],
+      circleColor: [
+        'case',
+        ['==', ['get', 'isActive'], false],
+        '#888888',
+        ['get', 'lineColor'],
+      ],
       circleStrokeColor: '#ffffff',
       circleStrokeWidth: 2,
       circleRadius: selectedStation
         ? ['case', ['==', ['get', 'id'], selectedStation.id], 0, 10]
         : 10,
-      circleOpacity: 1,
+      circleOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
     }),
     [selectedStation],
   );

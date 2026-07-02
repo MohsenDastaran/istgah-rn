@@ -20,21 +20,22 @@ function primaryLine(lineStr: string): string {
   return lineStr.split(',')[0].trim();
 }
 
-export const STATIONS: Station[] = rawStations
-  .filter((s) => s['Is Active'] === 'T')
-  .map((s) => {
-    const lineKey = s['Line(s)'];
-    const primary = primaryLine(lineKey);
-    return {
-      id: s.ID,
-      name: { en: s['Name English'], fa: s['Name Persian'] },
-      lineKey,
-      line: (lineNames as Record<string, string>)[primary] ?? `Line ${primary}`,
-      lineColor: (lineColors as Record<string, string>)[primary] ?? '#888888',
-      coordinates: [parseFloat(s.Longitude), parseFloat(s.Latitude)],
-      isActive: true,
-    };
-  });
+/** Map a raw data record to the app `Station` type. */
+function mapRawStation(s: RawStation): Station {
+  const lineKey = s['Line(s)'];
+  const primary = primaryLine(lineKey);
+  return {
+    id: s.ID,
+    name: { en: s['Name English'], fa: s['Name Persian'] },
+    lineKey,
+    line: (lineNames as Record<string, string>)[primary] ?? `Line ${primary}`,
+    lineColor: (lineColors as Record<string, string>)[primary] ?? '#888888',
+    coordinates: [parseFloat(s.Longitude), parseFloat(s.Latitude)],
+    isActive: s['Is Active'] === 'T',
+  };
+}
+
+export const STATIONS: Station[] = rawStations.map(mapRawStation);
 
 // ─── Metro line polylines ─────────────────────────────────────────────────────
 
@@ -51,24 +52,30 @@ export type LinePolyline = {
  * belong to), so we resolve neighbours only within each line's station set.
  */
 export function buildLinePolylines(raw: RawStation[]): LinePolyline[] {
-  const active = raw.filter((s) => s['Is Active'] === 'T');
-  const byId = new Map(active.map((s) => [s.ID, s]));
+  const byId = new Map(raw.map((s) => [s.ID, s]));
 
   // Collect all unique line keys (e.g. "1", "2", "BRT")
   const lineKeys = new Set<string>();
-  active.forEach((s) => s['Line(s)'].split(',').forEach((l) => lineKeys.add(l.trim())));
+  raw.forEach((s) => s['Line(s)'].split(',').forEach((l) => lineKeys.add(l.trim())));
 
   const result: LinePolyline[] = [];
 
   for (const line of lineKeys) {
-    // All active stations on this line
+    // All raw stations on this line
     const lineSet = new Set(
-      active.filter((s) => s['Line(s)'].split(',').map((l) => l.trim()).includes(line)).map((s) => s.ID)
+      raw
+        .filter((s) =>
+          s['Line(s)']
+            .split(',')
+            .map((l) => l.trim())
+            .includes(line)
+        )
+        .map((s) => s.ID)
     );
 
     // Terminal: the station where none of its Previous IDs belong to this line
     // (i.e. Previous = "-1" or all Previous IDs are outside the line)
-    const terminal = active.find((s) => {
+    const terminal = raw.find((s) => {
       if (!lineSet.has(s.ID)) return false;
       const prevIds = s.Previous.split(',').map((p) => p.trim());
       return !prevIds.some((p) => lineSet.has(p));
@@ -86,7 +93,9 @@ export function buildLinePolylines(raw: RawStation[]): LinePolyline[] {
 
       // Resolve next: find the Next ID that belongs to this line and isn't visited
       const nextIds: string[] = current.Next.split(',').map((n: string) => n.trim());
-      const nextId: string | undefined = nextIds.find((n: string) => lineSet.has(n) && !visited.has(n));
+      const nextId: string | undefined = nextIds.find(
+        (n: string) => lineSet.has(n) && !visited.has(n)
+      );
       current = nextId ? byId.get(nextId) : undefined;
     }
 
@@ -116,8 +125,7 @@ export const LINE_POLYLINES: LinePolyline[] = buildLinePolylines(rawStations);
  *  - True branching lines (Y-junction)
  *  - Inactive stations in the middle of a chain (skipped automatically)
  */
-export function buildMetroNetworkGeoJSON(raw: RawStation[]) {
-  const active = raw.filter((s) => s['Is Active'] === 'T');
+export function buildMetroNetworkGeoJSON(active: RawStation[]) {
   const byId = new Map(active.map((s) => [s.ID, s]));
   const seen = new Set<string>();
 
@@ -180,6 +188,7 @@ export function toGeoJSON(stations: Station[]) {
         nameFa: s.name.fa,
         line: s.line,
         lineColor: s.lineColor,
+        isActive: s.isActive,
       },
       geometry: {
         type: 'Point' as const,
