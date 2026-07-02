@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Navigation2,
   RouteOff,
+  X,
   type LucideIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
@@ -56,7 +57,7 @@ interface SheetHeaderProps {
 
 const SheetHeader = ({ placeholder, isRTL, onChangeText, value }: SheetHeaderProps) => (
   <Animated.View style={headerStyles.container}>
-    <View style={headerStyles.inputWrap}>
+    <View style={[headerStyles.inputWrap, isRTL && headerStyles.inputWrapRTL]}>
       <TextInput
         style={[headerStyles.input, isRTL && headerStyles.rtlInput]}
         placeholder={placeholder}
@@ -66,6 +67,15 @@ const SheetHeader = ({ placeholder, isRTL, onChangeText, value }: SheetHeaderPro
         onChangeText={onChangeText}
         returnKeyType="search"
       />
+      {value.length > 0 && (
+        <Pressable
+          onPress={() => onChangeText('')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search">
+          <X size={18} color={LIGHT_GRAY} strokeWidth={2.25} />
+        </Pressable>
+      )}
     </View>
   </Animated.View>
 );
@@ -85,12 +95,19 @@ const headerStyles = StyleSheet.create({
     paddingHorizontal: SPACING,
     height: INPUT_HEIGHT,
     borderRadius: INPUT_HEIGHT,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inputWrapRTL: {
+    flexDirection: 'row-reverse',
   },
   input: {
+    flex: 1,
     fontSize: 16,
     height: INPUT_HEIGHT,
     color: 'white',
+    padding: 0,
   },
   rtlInput: {
     writingDirection: 'rtl',
