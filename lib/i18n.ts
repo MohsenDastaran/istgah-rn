@@ -14,6 +14,13 @@ const translations = {
     collapse: 'Collapse',
     confirm: 'Confirm',
     headerTitle: 'Istgah',
+    distance: 'Distance',
+    duration: 'Duration',
+    getDirections: 'Get Directions',
+    locateYourselfFirst: 'Locate yourself first',
+    clearRoute: 'Clear Route',
+    backToList: 'Back to List',
+    openInGoogleMaps: 'Open in Google Maps',
   },
   fa: {
     appName: 'ایستگاه',
@@ -25,6 +32,13 @@ const translations = {
     collapse: 'جمع‌کردن',
     confirm: 'تایید',
     headerTitle: 'ایستگاه',
+    distance: 'مسافت',
+    duration: 'زمان',
+    getDirections: 'مسیریابی',
+    locateYourselfFirst: 'موقعیت شما یافت نشد',
+    clearRoute: 'حذف مسیر',
+    backToList: 'بازگشت به لیست',
+    openInGoogleMaps: 'باز کردن در گوگل مپ',
   },
 } as const;
 

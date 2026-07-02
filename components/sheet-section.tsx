@@ -5,6 +5,7 @@ import {
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
 import { useI18n } from '@/lib/i18n';
+import { openGoogleMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
 import * as React from 'react';
@@ -187,20 +188,24 @@ const rowStyles = StyleSheet.create({
 const RouteInfoBar = ({
   distance,
   duration,
+  distanceLabel,
+  durationLabel,
   isRTL,
 }: {
   distance: number;
   duration: number;
+  distanceLabel: string;
+  durationLabel: string;
   isRTL: boolean;
 }) => (
   <View style={[routeStyles.bar, isRTL && routeStyles.barRTL]}>
     <View style={routeStyles.cell}>
-      <Text style={routeStyles.label}>{isRTL ? 'مسافت' : 'Distance'}</Text>
+      <Text style={routeStyles.label}>{distanceLabel}</Text>
       <Text style={routeStyles.value}>{distance.toFixed(1)} km</Text>
     </View>
     <View style={routeStyles.divider} />
     <View style={routeStyles.cell}>
-      <Text style={routeStyles.label}>{isRTL ? 'زمان' : 'Duration'}</Text>
+      <Text style={routeStyles.label}>{durationLabel}</Text>
       <Text style={routeStyles.value}>{Math.round(duration)} min</Text>
     </View>
   </View>
@@ -231,6 +236,7 @@ const StationDetail = ({
   isRTL: boolean;
   sheetRef: React.RefObject<TrueSheet | null>;
 }) => {
+  const { t } = useI18n();
   const {
     route,
     routeDistance,
@@ -245,6 +251,11 @@ const StationDetail = ({
   const handleDirections = async () => {
     await fetchRoute();
     sheetRef.current?.resize(2);
+  };
+
+  const handleOpenGoogleMaps = () => {
+    const [lng, lat] = station.coordinates;
+    openGoogleMapsDirections(lat, lng);
   };
 
   const handleClose = () => {
@@ -268,24 +279,37 @@ const StationDetail = ({
 
       {/* Route info */}
       {route && routeDistance != null && routeDuration != null && (
-        <RouteInfoBar distance={routeDistance} duration={routeDuration} isRTL={isRTL} />
+        <RouteInfoBar
+          distance={routeDistance}
+          duration={routeDuration}
+          distanceLabel={t.distance}
+          durationLabel={t.duration}
+          isRTL={isRTL}
+        />
       )}
 
-      {/* Directions button */}
+      {/* Directions */}
       {!route && (
-        <SheetButton
-          text={isRTL ? 'مسیریابی' : 'Get Directions'}
-          loading={routeLoading}
-          disabled={!userLocation || routeLoading}
-          onPress={handleDirections}
-          hint={!userLocation ? (isRTL ? 'موقعیت شما یافت نشد' : 'Locate yourself first') : undefined}
-        />
+        <>
+          <SheetButton
+            text={t.getDirections}
+            loading={routeLoading}
+            disabled={!userLocation || routeLoading}
+            onPress={handleDirections}
+            hint={!userLocation ? t.locateYourselfFirst : undefined}
+          />
+          <SheetButton
+            text={t.openInGoogleMaps}
+            variant="secondary"
+            onPress={handleOpenGoogleMaps}
+          />
+        </>
       )}
 
       {/* Clear route */}
       {route && (
         <SheetButton
-          text={isRTL ? 'حذف مسیر' : 'Clear Route'}
+          text={t.clearRoute}
           variant="secondary"
           onPress={clearRoute}
         />
@@ -293,7 +317,7 @@ const StationDetail = ({
 
       {/* Back to list */}
       <SheetButton
-        text={isRTL ? 'بازگشت به لیست' : 'Back to List'}
+        text={t.backToList}
         variant="secondary"
         onPress={handleClose}
       />
