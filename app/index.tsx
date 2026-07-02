@@ -3,6 +3,7 @@ import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
 import {
+  INTERCHANGE_STATIONS,
   METRO_NETWORK_GEOJSON,
   STATIONS,
   STATIONS_GEOJSON,
@@ -23,6 +24,65 @@ const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
 
 const METRO_LINES_LAYER_ID = 'metro-lines';
 const STATIONS_LAYER_ID = 'stations-circles';
+
+// ─── Split-colour circle for interchange stations ─────────────────────────────
+const MARKER_SIZE = 20; // matches circleRadius:10 + circleStrokeWidth:2 = 12px, diameter 24px
+const MARKER_BORDER = 2;
+const MARKER_TOTAL = MARKER_SIZE + MARKER_BORDER * 2;
+
+type InterchangeMarkerProps = {
+  station: Station;
+  isSelected: boolean;
+  MapMarker: React.ComponentType<{
+    coordinate: [number, number];
+    onPress?: () => void;
+    children?: React.ReactNode;
+  }>;
+  selectStation: (s: Station) => void;
+};
+
+const InterchangeMarker = React.memo(function InterchangeMarker({
+  station,
+  isSelected,
+  MapMarker,
+  selectStation,
+}: InterchangeMarkerProps) {
+  const handlePress = React.useCallback(
+    () => selectStation(station),
+    [station, selectStation],
+  );
+
+  // The selected-station TrainFront pin is rendered separately; hide this marker.
+  if (isSelected) return null;
+
+  return (
+    <MapMarker coordinate={station.coordinates} onPress={handlePress}>
+      <View
+        style={{
+          width: MARKER_TOTAL,
+          height: MARKER_TOTAL,
+          borderRadius: MARKER_TOTAL / 2,
+          backgroundColor: '#ffffff',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: station.isActive ? 1 : 0.55,
+        }}>
+        <View
+          style={{
+            width: MARKER_SIZE,
+            height: MARKER_SIZE,
+            borderRadius: MARKER_SIZE / 2,
+            overflow: 'hidden',
+            flexDirection: 'row',
+          }}>
+          {station.lineColors.map((color, i) => (
+            <View key={i} style={{ flex: 1, backgroundColor: color }} />
+          ))}
+        </View>
+      </View>
+    </MapMarker>
+  );
+});
 
 // ─── Map layers (memoized — avoids re-rendering 140+ native markers on tap) ─────
 type MapLayersProps = {
@@ -127,6 +187,18 @@ const MapLayers = React.memo(function MapLayers({
         />
       )}
 
+      {/* Interchange stations — split-colour circles, rendered above line layers */}
+      {INTERCHANGE_STATIONS.map((station) => (
+        <InterchangeMarker
+          key={station.id}
+          station={station}
+          isSelected={selectedStation?.id === station.id}
+          MapMarker={MapMarker}
+          selectStation={selectStation}
+        />
+      ))}
+
+      {/* Selected-station pin sits above everything else */}
       {selectedStation && (
         <MapMarker coordinate={selectedStation.coordinates}>
           <View

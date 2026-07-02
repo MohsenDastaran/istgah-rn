@@ -1,6 +1,6 @@
 import { stations as rawStations } from '@/assets/data/stations';
 import type { Station as RawStation } from '~/types/station';
-import { lineColors, lineNames } from '@/assets/data/metroLines';
+import { lineColors as LINE_COLORS, lineNames as LINE_NAMES } from '@/assets/data/metroLines';
 
 export type Station = {
   id: string;
@@ -11,31 +11,35 @@ export type Station = {
   line: string;
   /** Hex colour for the primary line (or first line for interchanges) */
   lineColor: string;
+  /** All line colours for this station — >1 element means interchange */
+  lineColors: string[];
   coordinates: [number, number]; // [longitude, latitude]
   isActive: boolean;
 };
 
-/** Derive the primary line key from a "Line(s)" string like "1" or "1,3". */
-function primaryLine(lineStr: string): string {
-  return lineStr.split(',')[0].trim();
-}
-
 /** Map a raw data record to the app `Station` type. */
 function mapRawStation(s: RawStation): Station {
   const lineKey = s['Line(s)'];
-  const primary = primaryLine(lineKey);
+  const keys = lineKey.split(',').map((k) => k.trim());
+  const primary = keys[0];
   return {
     id: s.ID,
     name: { en: s['Name English'], fa: s['Name Persian'] },
     lineKey,
-    line: (lineNames as Record<string, string>)[primary] ?? `Line ${primary}`,
-    lineColor: (lineColors as Record<string, string>)[primary] ?? '#888888',
+    line: (LINE_NAMES as Record<string, string>)[primary] ?? `Line ${primary}`,
+    lineColor: (LINE_COLORS as Record<string, string>)[primary] ?? '#888888',
+    lineColors: keys.map((k) => (LINE_COLORS as Record<string, string>)[k] ?? '#888888'),
     coordinates: [parseFloat(s.Longitude), parseFloat(s.Latitude)],
     isActive: s['Is Active'] === 'T',
   };
 }
 
 export const STATIONS: Station[] = rawStations.map(mapRawStation);
+
+/** Stations that sit on two or more lines — rendered with split-colour markers. */
+export const INTERCHANGE_STATIONS: Station[] = STATIONS.filter((s) =>
+  s.lineKey.includes(',')
+);
 
 // ─── Metro line polylines ─────────────────────────────────────────────────────
 
@@ -102,8 +106,8 @@ export function buildLinePolylines(raw: RawStation[]): LinePolyline[] {
     if (coords.length >= 2) {
       result.push({
         lineKey: line,
-        name: (lineNames as Record<string, string>)[line] ?? `Line ${line}`,
-        color: (lineColors as Record<string, string>)[line] ?? '#888888',
+        name: (LINE_NAMES as Record<string, string>)[line] ?? `Line ${line}`,
+        color: (LINE_COLORS as Record<string, string>)[line] ?? '#888888',
         coordinates: coords,
       });
     }
@@ -158,7 +162,7 @@ export function buildMetroNetworkGeoJSON(active: RawStation[]) {
         type: 'Feature',
         properties: {
           lineKey: sharedLine,
-          color: (lineColors as Record<string, string>)[sharedLine] ?? '#888888',
+          color: (LINE_COLORS as Record<string, string>)[sharedLine] ?? '#888888',
         },
         geometry: {
           type: 'LineString',
@@ -198,5 +202,10 @@ export function toGeoJSON(stations: Station[]) {
   };
 }
 
-/** Pre-computed station points GeoJSON — computed once at module load. */
-export const STATIONS_GEOJSON = toGeoJSON(STATIONS);
+/**
+ * Pre-computed station points GeoJSON — single-line stations only.
+ * Interchange stations are rendered separately as native split-colour markers.
+ */
+export const STATIONS_GEOJSON = toGeoJSON(
+  STATIONS.filter((s) => !s.lineKey.includes(','))
+);
