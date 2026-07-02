@@ -304,7 +304,7 @@ const StationDetail = ({
 
   const handleDirections = async () => {
     await fetchRoute();
-    sheetRef.current?.resize(2);
+    sheetRef.current?.resize(1);
   };
 
   const handleOpenMaps = () => {
