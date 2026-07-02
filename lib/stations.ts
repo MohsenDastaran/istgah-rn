@@ -192,6 +192,10 @@ export function toGeoJSON(stations: Station[]) {
         nameFa: s.name.fa,
         line: s.line,
         lineColor: s.lineColor,
+        // Secondary line color for interchange stations; same as primary for single-line
+        // so style expressions can safely read it without null checks.
+        lineColor2: s.lineColors[1] ?? s.lineColor,
+        isInterchange: s.lineColors.length > 1,
         isActive: s.isActive,
       },
       geometry: {
@@ -202,10 +206,5 @@ export function toGeoJSON(stations: Station[]) {
   };
 }
 
-/**
- * Pre-computed station points GeoJSON — single-line stations only.
- * Interchange stations are rendered separately as native split-colour markers.
- */
-export const STATIONS_GEOJSON = toGeoJSON(
-  STATIONS.filter((s) => !s.lineKey.includes(','))
-);
+/** Pre-computed station points GeoJSON — all stations, computed once at module load. */
+export const STATIONS_GEOJSON = toGeoJSON(STATIONS);

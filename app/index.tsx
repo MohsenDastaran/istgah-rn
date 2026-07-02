@@ -3,7 +3,6 @@ import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
 import {
-  INTERCHANGE_STATIONS,
   METRO_NETWORK_GEOJSON,
   STATIONS,
   STATIONS_GEOJSON,
@@ -24,65 +23,6 @@ const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
 
 const METRO_LINES_LAYER_ID = 'metro-lines';
 const STATIONS_LAYER_ID = 'stations-circles';
-
-// ─── Split-colour circle for interchange stations ─────────────────────────────
-const MARKER_SIZE = 20; // matches circleRadius:10 + circleStrokeWidth:2 = 12px, diameter 24px
-const MARKER_BORDER = 2;
-const MARKER_TOTAL = MARKER_SIZE + MARKER_BORDER * 2;
-
-type InterchangeMarkerProps = {
-  station: Station;
-  isSelected: boolean;
-  MapMarker: React.ComponentType<{
-    coordinate: [number, number];
-    onPress?: () => void;
-    children?: React.ReactNode;
-  }>;
-  selectStation: (s: Station) => void;
-};
-
-const InterchangeMarker = React.memo(function InterchangeMarker({
-  station,
-  isSelected,
-  MapMarker,
-  selectStation,
-}: InterchangeMarkerProps) {
-  const handlePress = React.useCallback(
-    () => selectStation(station),
-    [station, selectStation],
-  );
-
-  // The selected-station TrainFront pin is rendered separately; hide this marker.
-  if (isSelected) return null;
-
-  return (
-    <MapMarker coordinate={station.coordinates} onPress={handlePress}>
-      <View
-        style={{
-          width: MARKER_TOTAL,
-          height: MARKER_TOTAL,
-          borderRadius: MARKER_TOTAL / 2,
-          backgroundColor: '#ffffff',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: station.isActive ? 1 : 0.55,
-        }}>
-        <View
-          style={{
-            width: MARKER_SIZE,
-            height: MARKER_SIZE,
-            borderRadius: MARKER_SIZE / 2,
-            overflow: 'hidden',
-            flexDirection: 'row',
-          }}>
-          {station.lineColors.map((color, i) => (
-            <View key={i} style={{ flex: 1, backgroundColor: color }} />
-          ))}
-        </View>
-      </View>
-    </MapMarker>
-  );
-});
 
 // ─── Map layers (memoized — avoids re-rendering 140+ native markers on tap) ─────
 type MapLayersProps = {
@@ -136,18 +76,34 @@ const MapLayers = React.memo(function MapLayers({
 
   const stationCircleStyle = React.useMemo(
     () => ({
+      // Inactive stations use grey; active stations use their primary line colour.
       circleColor: [
         'case',
         ['==', ['get', 'isActive'], false],
         '#888888',
         ['get', 'lineColor'],
       ],
-      circleStrokeColor: '#ffffff',
-      circleStrokeWidth: 2,
+      // Interchange stations: secondary line colour as stroke.
+      // Single-line stations: plain white stroke.
+      circleStrokeColor: [
+        'case',
+        ['boolean', ['get', 'isInterchange'], false],
+        ['get', 'lineColor2'],
+        '#ffffff',
+      ],
+      // Interchange stations get a thicker stroke so the second colour is clearly visible.
+      circleStrokeWidth: [
+        'case',
+        ['boolean', ['get', 'isInterchange'], false],
+        5,
+        2,
+      ],
+      // Hide the circle for the currently selected station (native pin takes over).
       circleRadius: selectedStation
         ? ['case', ['==', ['get', 'id'], selectedStation.id], 0, 10]
         : 10,
       circleOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
+      circleStrokeOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
     }),
     [selectedStation],
   );
@@ -186,17 +142,6 @@ const MapLayers = React.memo(function MapLayers({
           beforeId={STATIONS_LAYER_ID}
         />
       )}
-
-      {/* Interchange stations — split-colour circles, rendered above line layers */}
-      {INTERCHANGE_STATIONS.map((station) => (
-        <InterchangeMarker
-          key={station.id}
-          station={station}
-          isSelected={selectedStation?.id === station.id}
-          MapMarker={MapMarker}
-          selectStation={selectStation}
-        />
-      ))}
 
       {/* Selected-station pin sits above everything else */}
       {selectedStation && (
