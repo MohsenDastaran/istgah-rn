@@ -302,8 +302,8 @@ function MapControls({
   const positionStyle = {
     'top-left': { top: 8, left: 8 },
     'top-right': { top: 8, right: 8 },
-    'bottom-left': { bottom: 200, left: 23 },
-    'bottom-right': { bottom: 200, right: 23 },
+    'bottom-left': { bottom: 140, left: 20 },
+    'bottom-right': { bottom: 140, right: 20 },
   }[position];
 
   return (
