@@ -15,6 +15,7 @@ import {
   Navigation2,
   RouteOff,
   X,
+  XIcon,
   type LucideIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
@@ -32,7 +33,12 @@ import {
   type PressableProps,
   type TextStyle,
 } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const SPACING = 16;
@@ -430,16 +436,28 @@ const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
-  const currentDetentRef = React.useRef<number>(0);
+  const [currentDetent, setCurrentDetent] = React.useState(0);
   const { t, isRTL, lang, setLang } = useI18n();
   const { filteredStations, selectedStation, selectStation, searchQuery, setSearchQuery } =
     useStations();
 
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
+  const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
+
+  React.useEffect(() => {
+    floatingOpacity.value = withTiming(currentDetent === 1 ? 1 : 0, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [currentDetent, floatingOpacity]);
+
   const floatingStyle = useAnimatedStyle(() => {
     const translateY = Math.min(-HEADER_HEIGHT, -(height - animatedPosition.value));
-    return { transform: [{ translateY }] };
+    return {
+      opacity: floatingOpacity.value,
+      transform: [{ translateY }],
+    };
   });
 
   const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
@@ -450,10 +468,10 @@ const SheetSectionInner = () => {
   // calling resize(1) while already at detent 1 causes a native re-layout that
   // briefly expands the sheet to full-height, making the map vanish.
   React.useEffect(() => {
-    if (selectedStation && currentDetentRef.current === 0) {
+    if (selectedStation && currentDetent === 0) {
       sheetRef.current?.resize(1);
     }
-  }, [selectedStation]);
+  }, [selectedStation, currentDetent]);
 
   const handleStationPress = (station: Station) => {
     selectStation(station, { flyTo: true });
@@ -461,11 +479,17 @@ const SheetSectionInner = () => {
 
   return (
     <>
-      <AnimatedTouchable
-        activeOpacity={0.6}
-        style={[styles.floatingBtn, floatingStyle]}
-        onPress={() => sheetRef.current?.present(1)}
-      />
+      <Animated.View pointerEvents={currentDetent === 1 ? 'auto' : 'none'} style={floatingStyle}>
+        <AnimatedTouchable
+          activeOpacity={0.6}
+          disabled={currentDetent !== 1}
+          style={styles.floatingBtn}
+          onPress={() => sheetRef.current?.resize(0)}>
+          <View style={styles.floatingBtnContent}>
+            <XIcon size={20} color="white" />
+          </View>
+        </AnimatedTouchable>
+      </Animated.View>
 
       <ReanimatedTrueSheet
         name="main"
@@ -478,7 +502,7 @@ const SheetSectionInner = () => {
         detached
         backgroundColor={DARK}
         onDetentChange={(e) => {
-          currentDetentRef.current = e.nativeEvent.index;
+          setCurrentDetent(e.nativeEvent.index);
         }}
         header={
           <SheetHeader
@@ -561,5 +585,11 @@ const styles = StyleSheet.create({
   },
   rtlBlock: {
     alignItems: 'flex-end',
+  },
+  floatingBtnContent: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
