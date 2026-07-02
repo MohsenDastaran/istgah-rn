@@ -369,6 +369,8 @@ type MapRouteProps = {
   width?: number;
   opacity?: number;
   dashArray?: [number, number];
+  /** Insert this route layer below the given layer id (keeps markers on top). */
+  beforeId?: string;
 };
 
 function MapRoute({
@@ -377,6 +379,7 @@ function MapRoute({
   width = 3,
   opacity = 0.8,
   dashArray,
+  beforeId,
 }: MapRouteProps) {
   const id = useId();
   const sourceId = `route-source-${id}`;
@@ -400,6 +403,7 @@ function MapRoute({
       <Layer
         id={layerId}
         type="line"
+        beforeId={beforeId}
         style={{
           lineColor: color,
           lineWidth: width,

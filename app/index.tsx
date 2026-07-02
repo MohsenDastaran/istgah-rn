@@ -21,6 +21,9 @@ const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').S
 const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
 const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
 
+const METRO_LINES_LAYER_ID = 'metro-lines';
+const STATIONS_LAYER_ID = 'stations-circles';
+
 // ─── Map layers (memoized — avoids re-rendering 140+ native markers on tap) ─────
 type MapLayersProps = {
   selectedStation: Station | null;
@@ -34,6 +37,7 @@ type MapLayersProps = {
     coordinates: [number, number][];
     color?: string;
     width?: number;
+    beforeId?: string;
   }>;
   GeoJSONSource: React.ComponentType<{
     id?: string;
@@ -46,6 +50,8 @@ type MapLayersProps = {
     id: string;
     type: string;
     style?: Record<string, unknown>;
+    beforeId?: string;
+    afterId?: string;
   }>;
 };
 
@@ -88,10 +94,20 @@ const MapLayers = React.memo(function MapLayers({
 
   return (
     <>
+      {/* Station markers — registered first so line layers can sit beneath them */}
+      <GeoJSONSource
+        id="stations"
+        data={STATIONS_GEOJSON}
+        onPress={handleStationPress}
+        hitbox={{ top: 24, bottom: 24, left: 24, right: 24 }}>
+        <Layer id={STATIONS_LAYER_ID} type="circle" style={stationCircleStyle} />
+      </GeoJSONSource>
+
       <GeoJSONSource id="metro-network" data={METRO_NETWORK_GEOJSON}>
         <Layer
-          id="metro-lines"
+          id={METRO_LINES_LAYER_ID}
           type="line"
+          beforeId={STATIONS_LAYER_ID}
           style={{
             lineColor: ['get', 'color'],
             lineWidth: 3,
@@ -102,13 +118,14 @@ const MapLayers = React.memo(function MapLayers({
         />
       </GeoJSONSource>
 
-      <GeoJSONSource
-        id="stations"
-        data={STATIONS_GEOJSON}
-        onPress={handleStationPress}
-        hitbox={{ top: 24, bottom: 24, left: 24, right: 24 }}>
-        <Layer id="stations-circles" type="circle" style={stationCircleStyle} />
-      </GeoJSONSource>
+      {route && (
+        <MapRoute
+          coordinates={route}
+          color="#3b82f6"
+          width={4}
+          beforeId={STATIONS_LAYER_ID}
+        />
+      )}
 
       {selectedStation && (
         <MapMarker coordinate={selectedStation.coordinates}>
@@ -122,8 +139,6 @@ const MapLayers = React.memo(function MapLayers({
           </View>
         </MapMarker>
       )}
-
-      {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
     </>
   );
 });
