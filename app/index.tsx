@@ -2,12 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
-import {
-  METRO_NETWORK_GEOJSON,
-  STATIONS,
-  STATIONS_GEOJSON,
-  type Station,
-} from '@/lib/stations';
+import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON, type Station } from '@/lib/stations';
 import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { MoonStarIcon, SunIcon, TrainFrontIcon } from 'lucide-react-native';
@@ -19,7 +14,7 @@ const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
 const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').SheetSection : null;
 
 const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
-const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
+const mapComponents = isMapLibreLinked ? require('@/components/map') : null;
 
 const METRO_LINES_LAYER_ID = 'metro-lines';
 const STATIONS_LAYER_ID = 'stations-circles';
@@ -71,18 +66,13 @@ const MapLayers = React.memo(function MapLayers({
       const station = STATIONS.find((s) => s.id === id);
       if (station) selectStation(station);
     },
-    [selectStation],
+    [selectStation]
   );
 
   const stationCircleStyle = React.useMemo(
     () => ({
       // Inactive stations use grey; active stations use their primary line colour.
-      circleColor: [
-        'case',
-        ['==', ['get', 'isActive'], false],
-        '#888888',
-        ['get', 'lineColor'],
-      ],
+      circleColor: ['case', ['==', ['get', 'isActive'], false], '#888888', ['get', 'lineColor']],
       // Interchange stations: secondary line colour as stroke.
       // Single-line stations: plain white stroke.
       circleStrokeColor: [
@@ -92,12 +82,7 @@ const MapLayers = React.memo(function MapLayers({
         '#ffffff',
       ],
       // Interchange stations get a thicker stroke so the second colour is clearly visible.
-      circleStrokeWidth: [
-        'case',
-        ['boolean', ['get', 'isInterchange'], false],
-        5,
-        2,
-      ],
+      circleStrokeWidth: ['case', ['boolean', ['get', 'isInterchange'], false], 5, 2],
       // Hide the circle for the currently selected station (native pin takes over).
       circleRadius: selectedStation
         ? ['case', ['==', ['get', 'id'], selectedStation.id], 0, 10]
@@ -105,7 +90,7 @@ const MapLayers = React.memo(function MapLayers({
       circleOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
       circleStrokeOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
     }),
-    [selectedStation],
+    [selectedStation]
   );
 
   return (
@@ -135,12 +120,7 @@ const MapLayers = React.memo(function MapLayers({
       </GeoJSONSource>
 
       {route && (
-        <MapRoute
-          coordinates={route}
-          color="#3b82f6"
-          width={4}
-          beforeId={STATIONS_LAYER_ID}
-        />
+        <MapRoute coordinates={route} color="#3b82f6" width={4} beforeId={STATIONS_LAYER_ID} />
       )}
 
       {/* Selected-station pin sits above everything else */}
