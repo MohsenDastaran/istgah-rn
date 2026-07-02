@@ -361,7 +361,7 @@ const SheetSectionInner = () => {
         ref={sheetRef}
         detents={[minHeight / height, 'auto', 1]}
         initialDetentIndex={0}
-        dimmedDetentIndex={1}
+        dimmedDetentIndex={2}
         style={contentStyle}
         detached
         dismissible={false}

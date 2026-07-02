@@ -2,7 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
-import { METRO_NETWORK_GEOJSON, type Station } from '@/lib/stations';
+import {
+  METRO_NETWORK_GEOJSON,
+  STATIONS,
+  STATIONS_GEOJSON,
+  type Station,
+} from '@/lib/stations';
 import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { MoonStarIcon, SunIcon, TrainFrontIcon } from 'lucide-react-native';
@@ -16,50 +21,111 @@ const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').S
 const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
 const mapComponents = isMapLibreLinked ? require('@/components/ui/map') : null;
 
-// ─── Memoized station pin — only re-renders when its own props change ─────────
-type StationMarkerProps = {
-  station: Station;
-  isSelected: boolean;
-  // Passing the component itself avoids a module-level import dependency
+// ─── Map layers (memoized — avoids re-rendering 140+ native markers on tap) ─────
+type MapLayersProps = {
+  selectedStation: Station | null;
+  route: [number, number][] | null;
+  selectStation: (station: Station) => void;
   MapMarker: React.ComponentType<{
     coordinate: [number, number];
-    onPress?: () => void;
     children?: React.ReactNode;
   }>;
-  selectStation: (s: Station) => void;
+  MapRoute: React.ComponentType<{
+    coordinates: [number, number][];
+    color?: string;
+    width?: number;
+  }>;
+  GeoJSONSource: React.ComponentType<{
+    id?: string;
+    data: unknown;
+    onPress?: (event: { nativeEvent: { features?: GeoJSON.Feature[] } }) => void;
+    hitbox?: { top: number; bottom: number; left: number; right: number };
+    children?: React.ReactNode;
+  }>;
+  Layer: React.ComponentType<{
+    id: string;
+    type: string;
+    style?: Record<string, unknown>;
+  }>;
 };
 
-const StationMarker = React.memo(function StationMarker({
-  station,
-  isSelected,
-  MapMarker,
+const MapLayers = React.memo(function MapLayers({
+  selectedStation,
+  route,
   selectStation,
-}: StationMarkerProps) {
-  const handlePress = React.useCallback(
-    () => selectStation(station),
-    [station, selectStation],
+  MapMarker,
+  MapRoute,
+  GeoJSONSource,
+  Layer,
+}: MapLayersProps) {
+  const handleStationPress = React.useCallback(
+    (event: { nativeEvent: { features?: GeoJSON.Feature[] } }) => {
+      const id = event.nativeEvent.features?.[0]?.properties?.id;
+      if (typeof id !== 'string') return;
+      const station = STATIONS.find((s) => s.id === id);
+      if (station) selectStation(station);
+    },
+    [selectStation],
   );
+
+  const stationCircleStyle = React.useMemo(
+    () => ({
+      circleColor: ['get', 'lineColor'],
+      circleStrokeColor: '#ffffff',
+      circleStrokeWidth: 2,
+      circleRadius: selectedStation
+        ? ['case', ['==', ['get', 'id'], selectedStation.id], 0, 10]
+        : 10,
+      circleOpacity: 1,
+    }),
+    [selectedStation],
+  );
+
   return (
-    <MapMarker coordinate={station.coordinates} onPress={handlePress}>
-      <View
-        style={[
-          markerStyles.pin,
-          { backgroundColor: station.lineColor },
-          isSelected && markerStyles.pinSelected,
-        ]}>
-        <TrainFrontIcon
-          size={isSelected ? 14 : 11}
-          color="#ffffff"
-          strokeWidth={2.5}
+    <>
+      <GeoJSONSource id="metro-network" data={METRO_NETWORK_GEOJSON}>
+        <Layer
+          id="metro-lines"
+          type="line"
+          style={{
+            lineColor: ['get', 'color'],
+            lineWidth: 3,
+            lineOpacity: 0.85,
+            lineJoin: 'round',
+            lineCap: 'round',
+          }}
         />
-      </View>
-    </MapMarker>
+      </GeoJSONSource>
+
+      <GeoJSONSource
+        id="stations"
+        data={STATIONS_GEOJSON}
+        onPress={handleStationPress}
+        hitbox={{ top: 24, bottom: 24, left: 24, right: 24 }}>
+        <Layer id="stations-circles" type="circle" style={stationCircleStyle} />
+      </GeoJSONSource>
+
+      {selectedStation && (
+        <MapMarker coordinate={selectedStation.coordinates}>
+          <View
+            style={[
+              markerStyles.pin,
+              { backgroundColor: selectedStation.lineColor },
+              markerStyles.pinSelected,
+            ]}>
+            <TrainFrontIcon size={14} color="#ffffff" strokeWidth={2.5} />
+          </View>
+        </MapMarker>
+      )}
+
+      {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
+    </>
   );
 });
 
 // ─── Map content (children of <Map>) ─────────────────────────────────────────
 function MapContent() {
-  const { stations, selectedStation, route, selectStation, setUserLocation } = useStations();
+  const { selectedStation, route, selectStation, setUserLocation } = useStations();
   // Safe: MapContent is only ever rendered inside <Map>, which provides MapContext.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { cameraRef } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
@@ -105,33 +171,15 @@ function MapContent() {
 
   return (
     <>
-      {/* Metro network — single GeoJSON source handles all segments & branches */}
-      <GeoJSONSource id="metro-network" data={METRO_NETWORK_GEOJSON}>
-        <Layer
-          id="metro-lines"
-          type="line"
-          style={{
-            lineColor: ['get', 'color'],
-            lineWidth: 3,
-            lineOpacity: 0.85,
-            lineJoin: 'round',
-            lineCap: 'round',
-          }}
-        />
-      </GeoJSONSource>
-
-      {/* Station markers — memoized so only the selected/deselected pair re-renders */}
-      {stations.map((station) => (
-        <StationMarker
-          key={station.id}
-          station={station}
-          isSelected={selectedStation?.id === station.id}
-          MapMarker={MapMarker}
-          selectStation={selectStation}
-        />
-      ))}
-
-      {route && <MapRoute coordinates={route} color="#3b82f6" width={4} />}
+      <MapLayers
+        selectedStation={selectedStation}
+        route={route}
+        selectStation={selectStation}
+        MapMarker={MapMarker}
+        MapRoute={MapRoute}
+        GeoJSONSource={GeoJSONSource}
+        Layer={Layer}
+      />
 
       {hasPermission && <MapUserLocation />}
 
@@ -201,21 +249,19 @@ const styles = StyleSheet.create({
 
 const markerStyles = StyleSheet.create({
   pin: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 3,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
+    elevation: 6,
   },
   pinSelected: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: 3,
-    elevation: 6,
   },
 });
 

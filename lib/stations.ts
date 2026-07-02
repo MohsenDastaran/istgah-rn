@@ -188,3 +188,6 @@ export function toGeoJSON(stations: Station[]) {
     })),
   };
 }
+
+/** Pre-computed station points GeoJSON — computed once at module load. */
+export const STATIONS_GEOJSON = toGeoJSON(STATIONS);
