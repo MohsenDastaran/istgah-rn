@@ -468,10 +468,6 @@ const SheetSectionInner = () => {
         ) : (
           <>
             {/* ── Station list ── */}
-            <View style={[styles.heading, isRTL && styles.rtlBlock]}>
-              <Text style={styles.title}>{t.appName}</Text>
-              <Text style={styles.subtitle}>{t.subtitle}</Text>
-            </View>
 
             <FlatList
               data={filteredStations}
@@ -539,16 +535,5 @@ const styles = StyleSheet.create({
   },
   rtlBlock: {
     alignItems: 'flex-end',
-  },
-  title: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '600',
-    color: 'white',
-  },
-  subtitle: {
-    lineHeight: 22,
-    color: GRAY,
-    fontSize: 13,
   },
 });

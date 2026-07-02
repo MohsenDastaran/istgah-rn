@@ -6,7 +6,6 @@ import { AppState, Platform } from 'react-native';
 const translations = {
   en: {
     appName: 'Istgah',
-    subtitle: 'The true native bottom sheet experience.',
     search: 'Search...',
     english: 'English',
     persian: 'Persian',
@@ -24,7 +23,6 @@ const translations = {
   },
   fa: {
     appName: 'ایستگاه',
-    subtitle: 'تجربه واقعی برگه بومی در React Native.',
     search: 'جستجو...',
     english: 'انگلیسی',
     persian: 'فارسی',
