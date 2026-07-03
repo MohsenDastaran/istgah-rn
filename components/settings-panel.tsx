@@ -23,13 +23,14 @@ import {
 import { Text } from '@/components/ui/text';
 import { useI18n, type Lang } from '@/lib/i18n';
 import {
-  AlertCircle,
+  CircleAlert,
+  Code,
   ExternalLink,
-  Github,
   Globe,
   Info,
   Palette,
-  Settings2,
+  Settings,
+  User2,
   type LucideIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
@@ -92,7 +93,7 @@ function ReportIssueDialog() {
       <DialogTrigger asChild>
         <View>
           <FooterLinkTrigger
-            icon={AlertCircle}
+            icon={CircleAlert}
             label="Report an Issue"
             onPress={() => setOpen(true)}
           />
@@ -117,7 +118,7 @@ function ReportIssueDialog() {
           </DialogClose>
           <Button
             onPress={() => {
-              Linking.openURL('https://github.com/mohsendastaran/istgah-rn/issues');
+              Linking.openURL('https://github.com/MohsenDastaran/istgah-rn/issues');
               setOpen(false);
             }}>
             <Icon as={ExternalLink} className="text-primary-foreground size-4" />
@@ -165,16 +166,22 @@ function AboutDialog() {
         </View>
 
         <DialogFooter>
-          <DialogClose asChild>
+          {/* <DialogClose asChild>
             <Button variant="outline">
               <Text>Close</Text>
             </Button>
-          </DialogClose>
+          </DialogClose> */}
           <Button
             variant="outline"
-            onPress={() => Linking.openURL('https://github.com/mohsen-dastaran')}>
-            <Icon as={Github} className="text-foreground size-4" />
-            <Text>GitHub</Text>
+            onPress={() => Linking.openURL('https://github.com/MohsenDastaran')}>
+            <Icon as={User2} className="text-foreground size-4" />
+            <Text>Developer's GitHub Profile</Text>
+          </Button>
+          <Button
+            variant="outline"
+            onPress={() => Linking.openURL('https://github.com/MohsenDastaran/istgah-rn')}>
+            <Icon as={Code} className="text-foreground size-4" />
+            <Text>App Source Code</Text>
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -216,7 +223,7 @@ export function SettingsPanel() {
           size="icon"
           className="ios:size-9 web:mx-4 rounded-full"
           accessibilityLabel="Settings">
-          <Icon as={Settings2} className="size-5" />
+          <Icon as={Settings} className="size-5" />
         </Button>
       </PopoverTrigger>
 
