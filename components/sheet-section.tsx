@@ -476,7 +476,10 @@ const SheetSectionInner = () => {
   const handleStationPress = (station: Station) => {
     selectStation(station, { flyTo: true });
   };
-
+  const handleSheetClose = () => {
+    selectStation(null);
+    sheetRef.current?.resize(0);
+  };
   return (
     <>
       <Animated.View pointerEvents={currentDetent === 1 ? 'auto' : 'none'} style={floatingStyle}>
@@ -484,7 +487,7 @@ const SheetSectionInner = () => {
           activeOpacity={0.6}
           disabled={currentDetent !== 1}
           style={styles.floatingBtn}
-          onPress={() => sheetRef.current?.resize(0)}>
+          onPress={handleSheetClose}>
           <View style={styles.floatingBtnContent}>
             <XIcon size={20} color="white" />
           </View>
