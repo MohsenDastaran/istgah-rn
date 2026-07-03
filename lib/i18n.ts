@@ -1,6 +1,13 @@
+import AsyncStorageModule from '@react-native-async-storage/async-storage';
+// The native module may be absent in an older dev build (before `npx expo run:android`).
+// Use optional chaining everywhere so the app doesn't crash — persistence just won't
+// work until the app is rebuilt with the new native module included.
+const AsyncStorage = AsyncStorageModule ?? null;
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
+
+const LANG_STORAGE_KEY = '@istgah/lang';
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const translations = {
@@ -101,20 +108,35 @@ function deviceLocaleToLang(locale: DeviceLocale): Lang {
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = React.useState<Lang>(() => deviceLocaleToLang(readDeviceLocale()));
+  const [lang, setLangState] = React.useState<Lang>(() => deviceLocaleToLang(readDeviceLocale()));
 
+  // On mount, load persisted preference (overrides device locale if set)
+  React.useEffect(() => {
+    AsyncStorage?.getItem(LANG_STORAGE_KEY).then((saved) => {
+      if (saved === 'en' || saved === 'fa') {
+        setLangState(saved);
+      }
+    });
+  }, []);
+
+  // Listen for device locale changes (only applies when no manual override)
   React.useEffect(() => {
     const localization = requireOptionalNativeModule<ExpoLocalizationModule>('ExpoLocalization');
-    const refresh = () => setLang(deviceLocaleToLang(readDeviceLocale()));
+    const refresh = () => {
+      if (AsyncStorage) {
+        AsyncStorage.getItem(LANG_STORAGE_KEY).then((saved) => {
+          if (!saved) setLangState(deviceLocaleToLang(readDeviceLocale()));
+        });
+      } else {
+        setLangState(deviceLocaleToLang(readDeviceLocale()));
+      }
+    };
 
     const subscription = localization?.addListener?.('onLocaleSettingsChanged', refresh);
-
     const appStateSubscription =
       Platform.OS === 'android'
         ? AppState.addEventListener('change', (state) => {
-            if (state === 'active') {
-              refresh();
-            }
+            if (state === 'active') refresh();
           })
         : null;
 
@@ -124,6 +146,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const setLang = React.useCallback((newLang: Lang) => {
+    setLangState(newLang);
+    AsyncStorage?.setItem(LANG_STORAGE_KEY, newLang);
+  }, []);
+
   const value = React.useMemo<I18nContextValue>(
     () => ({
       t: translations[lang],
@@ -131,7 +158,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       isRTL: lang === 'fa',
       setLang,
     }),
-    [lang]
+    [lang, setLang]
   );
 
   return React.createElement(I18nContext.Provider, { value }, children);
