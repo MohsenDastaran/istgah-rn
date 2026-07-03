@@ -23,7 +23,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { LocateFixed, Minus, Plus } from 'lucide-react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useUniwind } from 'uniwind';
 
 type MapContextValue = {
@@ -299,6 +300,9 @@ function MapControls({
     }
   };
 
+  const { theme } = useUniwind();
+  const isDark = theme === 'dark';
+
   const positionStyle = {
     'top-left': { top: 8, left: 8 },
     'top-right': { top: 8, right: 8 },
@@ -306,30 +310,33 @@ function MapControls({
     'bottom-right': { bottom: 140, right: 20 },
   }[position];
 
+  const cardStyle = [
+    controlStyles.card,
+    isDark ? controlStyles.cardDark : controlStyles.cardLight,
+  ];
+  const dividerStyle = isDark ? controlStyles.dividerDark : controlStyles.dividerLight;
+  const iconColor = isDark ? '#e2e8f0' : '#334155';
+
   return (
-    <View className={cn('absolute gap-1.5', className)} style={positionStyle}>
+    <View style={[controlStyles.container, positionStyle]} className={className}>
       {showZoom && (
-        <View
-          className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm"
-          style={{ elevation: 2 }}>
-          <ControlButton onPress={handleZoomIn} label="+">
-            <Text className="text-lg font-semibold text-gray-700">+</Text>
+        <View style={cardStyle}>
+          <ControlButton onPress={handleZoomIn} label="Zoom in" isDark={isDark}>
+            <Plus size={20} color={iconColor} strokeWidth={2} />
           </ControlButton>
-          <View className="h-px bg-gray-200" />
-          <ControlButton onPress={handleZoomOut} label="-">
-            <Text className="text-lg font-semibold text-gray-700">−</Text>
+          <View style={dividerStyle} />
+          <ControlButton onPress={handleZoomOut} label="Zoom out" isDark={isDark}>
+            <Minus size={20} color={iconColor} strokeWidth={2} />
           </ControlButton>
         </View>
       )}
       {showLocate && (
-        <View
-          className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm"
-          style={{ elevation: 2 }}>
-          <ControlButton onPress={handleLocatePress} label="locate" disabled={isLocating}>
+        <View style={cardStyle}>
+          <ControlButton onPress={handleLocatePress} label="My location" isDark={isDark} disabled={isLocating}>
             {isLocating ? (
-              <ActivityIndicator size="small" color="#666" />
+              <ActivityIndicator size="small" color={iconColor} />
             ) : (
-              <Text className="text-lg font-semibold text-gray-700">📍</Text>
+              <LocateFixed size={20} color={iconColor} strokeWidth={2} />
             )}
           </ControlButton>
         </View>
@@ -343,25 +350,81 @@ function ControlButton({
   label,
   children,
   disabled = false,
+  isDark = false,
 }: {
   onPress: () => void;
   label: string;
   children: ReactNode;
   disabled?: boolean;
+  isDark?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       hitSlop={8}
-      className="h-8 w-8 items-center justify-center active:bg-gray-100"
-      style={disabled ? { opacity: 0.5 } : undefined}
+      style={({ pressed }) => [
+        controlStyles.btn,
+        pressed && (isDark ? controlStyles.btnPressedDark : controlStyles.btnPressedLight),
+        disabled && controlStyles.btnDisabled,
+      ]}
       accessibilityLabel={label}
       accessibilityRole="button">
       {children}
     </Pressable>
   );
 }
+
+const controlStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    gap: 8,
+  },
+  card: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  cardLight: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  cardDark: {
+    backgroundColor: 'rgba(30, 36, 46, 0.92)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  dividerLight: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginHorizontal: 10,
+  },
+  dividerDark: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 10,
+  },
+  btn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnPressedLight: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  btnPressedDark: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  btnDisabled: {
+    opacity: 0.4,
+  },
+});
 
 type MapRouteProps = {
   coordinates: Array<[number, number]>;
