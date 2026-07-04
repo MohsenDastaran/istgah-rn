@@ -37,16 +37,16 @@
 
 ## ویژگی‌ها
 
-| ویژگی | توضیح |
-|--------|--------|
-| **نقشه تعاملی** | نمایش ایستگاه‌ها با MapLibre؛ رنگ هر ایستگاه مطابق خط مترو |
-| **جستجوی دوزبانه** | جستجو با نام فارسی یا انگلیسی |
+| ویژگی                | توضیح                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| **نقشه تعاملی**      | نمایش ایستگاه‌ها با MapLibre؛ رنگ هر ایستگاه مطابق خط مترو                                  |
+| **جستجوی دوزبانه**   | جستجو با نام فارسی یا انگلیسی                                                               |
 | **برگه پایینی بومی** | تجربه روان با [True Sheet](https://github.com/lodev09/react-native-true-sheet) و Reanimated |
-| **مسیریابی** | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی) |
-| **موقعیت‌یابی** | نمایش موقعیت کاربر روی نقشه و دکمه «مکان من» |
-| **تم روشن / تاریک** | هماهنگ با نقشه و رابط کاربری |
-| **پشتیبانی RTL** | چیدمان و متن مناسب برای فارسی |
-| **۷ خط مترو + BRT** | داده کامل ایستگاه‌های فعال تهران |
+| **مسیریابی**         | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی)                                 |
+| **موقعیت‌یابی**      | نمایش موقعیت کاربر روی نقشه و دکمه «مکان من»                                                |
+| **تم روشن / تاریک**  | هماهنگ با نقشه و رابط کاربری                                                                |
+| **پشتیبانی RTL**     | چیدمان و متن مناسب برای فارسی                                                               |
+| **۷ خط مترو + BRT**  | داده کامل ایستگاه‌های فعال تهران                                                            |
 
 ---
 
@@ -124,14 +124,14 @@ istgah-rn/
 │   ├── _layout.tsx         # لایه ریشه، تم و Providerها
 │   └── index.tsx           # صفحه اصلی (نقشه + برگه)
 ├── assets/data/
-│   ├── stations.ts         # داده خام ایستگاه‌ها
+│   ├── metroStations.ts         # داده خام ایستگاه‌ها
 │   └── metroLines.ts       # رنگ و نام خطوط
 ├── components/
 │   ├── sheet-section.tsx   # برگه پایینی، جستجو، جزئیات ایستگاه
 │   └── ui/                 # اجزای UI (نقشه، دکمه، …)
 ├── lib/
 │   ├── i18n.ts             # ترجمه فارسی / انگلیسی
-│   ├── stations.ts         # تبدیل داده و GeoJSON
+│   ├── metroStations.ts         # تبدیل داده و GeoJSON
 │   ├── stations-context.tsx# state ایستگاه‌ها و مسیریابی
 │   └── theme.ts            # تم ناوبری
 └── types/
@@ -155,7 +155,7 @@ flowchart TB
     end
 
     subgraph Data
-        Stations["assets/data/stations.ts"]
+        Stations["assets/data/metroStations.ts"]
         OSRM["OSRM Routing API"]
     end
 
@@ -173,7 +173,7 @@ flowchart TB
 
 ## داده‌ها
 
-- بیش از **۱۰۰ ایستگاه فعال** در `assets/data/stations.ts`
+- بیش از **۱۰۰ ایستگاه فعال** در `assets/data/metroStations.ts`
 - خطوط ۱ تا ۷ و BRT با رنگ‌های استاندارد در `assets/data/metroLines.ts`
 - فقط ایستگاه‌هایی با `Is Active: "T"` در اپ نمایش داده می‌شوند
 - مسیریابی از سرویس عمومی [OSRM](https://router.project-osrm.org) (حالت رانندگی؛ تخمینی)
@@ -182,15 +182,15 @@ flowchart TB
 
 ## فناوری‌ها
 
-| لایه | ابزار |
-|------|--------|
-| فریم‌ورک | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/) |
-| زبان | [TypeScript](https://www.typescriptlang.org) |
-| نقشه | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native) |
-| UI | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
-| انیمیشن | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/) |
-| موقعیت | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) |
-| استایل نقشه | [CARTO Basemaps](https://carto.com/basemaps) |
+| لایه        | ابزار                                                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| فریم‌ورک    | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/)        |
+| زبان        | [TypeScript](https://www.typescriptlang.org)                                                                                                  |
+| نقشه        | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native)                                                          |
+| UI          | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
+| انیمیشن     | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                           |
+| موقعیت      | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                          |
+| استایل نقشه | [CARTO Basemaps](https://carto.com/basemaps)                                                                                                  |
 
 ---
 
@@ -200,7 +200,7 @@ flowchart TB
 ۲. شاخه feature بسازید (`git checkout -b feature/amazing-feature`)  
 ۳. تغییرات را commit کنید  
 ۴. Push به شاخه (`git push origin feature/amazing-feature`)  
-۵. Pull Request باز کنید  
+۵. Pull Request باز کنید
 
 ---
 
@@ -245,7 +245,7 @@ flowchart TB
 
 ## About
 
-**Istgah** (Persian for *station*) is a native mobile app built with React Native for exploring Tehran's metro and BRT stations. All active stations appear on an interactive map. Search by name, view station details, and get turn-by-turn-style routing from your current location to any station.
+**Istgah** (Persian for _station_) is a native mobile app built with React Native for exploring Tehran's metro and BRT stations. All active stations appear on an interactive map. Search by name, view station details, and get turn-by-turn-style routing from your current location to any station.
 
 The UI follows the device locale by default and can be switched between **Persian (RTL)** and **English (LTR)** at any time.
 
@@ -253,16 +253,16 @@ The UI follows the device locale by default and can be switched between **Persia
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Interactive map** | MapLibre-powered station markers colored by metro line |
-| **Bilingual search** | Filter stations by Persian or English name |
+| Feature                 | Description                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| **Interactive map**     | MapLibre-powered station markers colored by metro line                                        |
+| **Bilingual search**    | Filter stations by Persian or English name                                                    |
 | **Native bottom sheet** | Fluid UX with [True Sheet](https://github.com/lodev09/react-native-true-sheet) and Reanimated |
-| **Directions** | Route from your location to a station via OSRM (distance & ETA) |
-| **User location** | Live position on the map with a "locate me" control |
-| **Light / dark theme** | Synchronized map basemap and app chrome |
-| **RTL support** | Layout and typography tuned for Persian |
-| **7 metro lines + BRT** | Complete dataset of active Tehran stations |
+| **Directions**          | Route from your location to a station via OSRM (distance & ETA)                               |
+| **User location**       | Live position on the map with a "locate me" control                                           |
+| **Light / dark theme**  | Synchronized map basemap and app chrome                                                       |
+| **RTL support**         | Layout and typography tuned for Persian                                                       |
+| **7 metro lines + BRT** | Complete dataset of active Tehran stations                                                    |
 
 ---
 
@@ -340,14 +340,14 @@ istgah-rn/
 │   ├── _layout.tsx         # Root layout, theme, providers
 │   └── index.tsx           # Main screen (map + sheet)
 ├── assets/data/
-│   ├── stations.ts         # Raw station dataset
+│   ├── metroStations.ts         # Raw station dataset
 │   └── metroLines.ts       # Line colors and names
 ├── components/
 │   ├── sheet-section.tsx   # Bottom sheet, search, station detail
 │   └── ui/                 # UI primitives (map, button, …)
 ├── lib/
 │   ├── i18n.ts             # Persian / English strings
-│   ├── stations.ts         # Data transforms & GeoJSON
+│   ├── metroStations.ts         # Data transforms & GeoJSON
 │   ├── stations-context.tsx# Station state & routing
 │   └── theme.ts            # Navigation theme
 └── types/
@@ -371,7 +371,7 @@ flowchart TB
     end
 
     subgraph Data
-        Stations["assets/data/stations.ts"]
+        Stations["assets/data/metroStations.ts"]
         OSRM["OSRM Routing API"]
     end
 
@@ -389,7 +389,7 @@ flowchart TB
 
 ## Data
 
-- **100+ active stations** in `assets/data/stations.ts`
+- **100+ active stations** in `assets/data/metroStations.ts`
 - Lines 1–7 and BRT with standard colors in `assets/data/metroLines.ts`
 - Only stations marked `Is Active: "T"` are shown in the app
 - Routing uses the public [OSRM](https://router.project-osrm.org) API (driving profile; approximate)
@@ -398,25 +398,25 @@ flowchart TB
 
 ## Tech Stack
 
-| Layer | Tools |
-|-------|-------|
-| Framework | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/) |
-| Language | [TypeScript](https://www.typescriptlang.org) |
-| Maps | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native) |
-| UI | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
-| Animation | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/) |
-| Location | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) |
-| Map tiles | [CARTO Basemaps](https://carto.com/basemaps) |
+| Layer     | Tools                                                                                                                                         |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/)        |
+| Language  | [TypeScript](https://www.typescriptlang.org)                                                                                                  |
+| Maps      | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native)                                                          |
+| UI        | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
+| Animation | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                           |
+| Location  | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                          |
+| Map tiles | [CARTO Basemaps](https://carto.com/basemaps)                                                                                                  |
 
 ---
 
 ## Contributing
 
-1. Fork the repo  
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)  
-3. Commit your changes  
-4. Push to the branch (`git push origin feature/amazing-feature`)  
-5. Open a Pull Request  
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 

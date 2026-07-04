@@ -1,4 +1,4 @@
-import { stations as rawStations } from '@/assets/data/stations';
+import { stations as rawStations } from '@/assets/data/metroStations';
 import type { Station as RawStation } from '~/types/station';
 import { lineColors as LINE_COLORS, lineNames as LINE_NAMES } from '@/assets/data/metroLines';
 
@@ -37,9 +37,7 @@ function mapRawStation(s: RawStation): Station {
 export const STATIONS: Station[] = rawStations.map(mapRawStation);
 
 /** Stations that sit on two or more lines — rendered with split-colour markers. */
-export const INTERCHANGE_STATIONS: Station[] = STATIONS.filter((s) =>
-  s.lineKey.includes(',')
-);
+export const INTERCHANGE_STATIONS: Station[] = STATIONS.filter((s) => s.lineKey.includes(','));
 
 // ─── Metro line polylines ─────────────────────────────────────────────────────
 
