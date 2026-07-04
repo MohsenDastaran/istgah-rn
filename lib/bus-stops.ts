@@ -114,3 +114,22 @@ export function searchBusStops(query: string): { brt: BusStop[]; bus: BusStop[] 
   }
   return { brt, bus };
 }
+
+function matchesBusStopQuery(stop: BusStop, query: string): boolean {
+  const q = query.trim();
+  if (!q) return true;
+  const lower = q.toLowerCase();
+  return (
+    stop.name.includes(q) ||
+    stop.latinName.toLowerCase().includes(lower) ||
+    stop.address.includes(q) ||
+    stop.brtLine.toLowerCase().includes(lower)
+  );
+}
+
+/** All BRT stops for the sheet list — filtered when the user types a query. */
+export function listBrtStops(query: string): BusStop[] {
+  const q = query.trim();
+  if (!q) return BRT_BUS_STOPS;
+  return BRT_BUS_STOPS.filter((stop) => matchesBusStopQuery(stop, q));
+}

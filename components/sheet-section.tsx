@@ -5,12 +5,13 @@ import {
   ReanimatedTrueSheetProvider,
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
+import { useCity } from '@/lib/city-context';
 import { useI18n } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
-import { type BusStop, searchBusStops } from '@/lib/bus-stops';
+import { type BusStop, listBrtStops, searchBusStops } from '@/lib/bus-stops';
 import {
   ArrowLeft,
   ArrowRight,
@@ -215,34 +216,65 @@ const catStyles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
 });
 
-// ─── Metro station row ────────────────────────────────────────────────────────
-const MetroRow = React.memo(function MetroRow({
-  station,
+const TYPE_META = {
+  metro: { Icon: TrainFront, color: '#60a5fa' },
+  brt: { Icon: Bus, color: '#fb923c' },
+  bus: { Icon: Bus, color: '#94a3b8' },
+} as const;
+
+type RowTypeKind = keyof typeof TYPE_META;
+
+// ─── Station list row ─────────────────────────────────────────────────────────
+const StationListRow = React.memo(function StationListRow({
+  name,
+  detail,
+  cityLabel,
+  typeLabel,
+  typeKind,
+  dotColor,
+  dotInactive,
   isRTL,
   onPress,
 }: {
-  station: Station;
+  name: string;
+  detail?: string;
+  cityLabel: string;
+  typeLabel: string;
+  typeKind: RowTypeKind;
+  dotColor: string;
+  dotInactive?: boolean;
   isRTL: boolean;
   onPress: () => void;
 }) {
+  const { Icon, color: typeColor } = TYPE_META[typeKind];
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
       <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
         <View
-          style={[
-            rowStyles.dot,
-            { backgroundColor: station.lineColor },
-            !station.isActive && rowStyles.dotInactive,
-          ]}
+          style={[rowStyles.dot, { backgroundColor: dotColor }, dotInactive && rowStyles.dotInactive]}
         />
-        <View style={[rowStyles.textWrap, isRTL && rowStyles.textWrapRTL]}>
+        <View style={[rowStyles.main, isRTL && rowStyles.mainRTL]}>
           <Text style={rowStyles.name} numberOfLines={1}>
-            {isRTL ? station.name.fa : station.name.en}
+            {name}
           </Text>
-          <Text style={rowStyles.sub} numberOfLines={1}>
-            {station.line}
+          {detail ? (
+            <Text style={rowStyles.sub} numberOfLines={1}>
+              {detail}
+            </Text>
+          ) : null}
+        </View>
+        <View style={[rowStyles.trailing, isRTL && rowStyles.trailingRTL]}>
+          <View style={[rowStyles.typeRow, isRTL && rowStyles.typeRowRTL]}>
+            <Icon size={12} color={typeColor} strokeWidth={2.5} />
+            <Text style={[rowStyles.type, { color: typeColor }]} numberOfLines={1}>
+              {typeLabel}
+            </Text>
+          </View>
+          <Text style={rowStyles.city} numberOfLines={1}>
+            {cityLabel}
           </Text>
         </View>
       </View>
@@ -250,36 +282,92 @@ const MetroRow = React.memo(function MetroRow({
   );
 });
 
+// ─── Metro station row ────────────────────────────────────────────────────────
+const MetroRow = React.memo(function MetroRow({
+  station,
+  cityLabel,
+  typeLabel,
+  isRTL,
+  onPress,
+}: {
+  station: Station;
+  cityLabel: string;
+  typeLabel: string;
+  isRTL: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <StationListRow
+      name={isRTL ? station.name.fa : station.name.en}
+      detail={station.line}
+      cityLabel={cityLabel}
+      typeLabel={typeLabel}
+      typeKind="metro"
+      dotColor={station.lineColor}
+      dotInactive={!station.isActive}
+      isRTL={isRTL}
+      onPress={onPress}
+    />
+  );
+});
+
 // ─── Bus stop row ─────────────────────────────────────────────────────────────
 const BusRow = React.memo(function BusRow({
   stop,
+  cityLabel,
+  typeLabel,
+  typeKind,
   isRTL,
   onPress,
 }: {
   stop: BusStop;
+  cityLabel: string;
+  typeLabel: string;
+  typeKind: 'brt' | 'bus';
   isRTL: boolean;
   onPress: () => void;
 }) {
+  const name = isRTL || !stop.latinName ? stop.name : stop.latinName;
+  const detail = stop.isBRT ? stop.brtLine : stop.lines;
   const dotColor = stop.isBRT ? '#f97316' : '#64748b';
+
   return (
-    <Pressable
+    <StationListRow
+      name={name}
+      detail={detail || undefined}
+      cityLabel={cityLabel}
+      typeLabel={typeLabel}
+      typeKind={typeKind}
+      dotColor={dotColor}
+      isRTL={isRTL}
       onPress={onPress}
-      style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
-      <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
-        <View style={[rowStyles.dot, { backgroundColor: dotColor }]} />
-        <View style={[rowStyles.textWrap, isRTL && rowStyles.textWrapRTL]}>
-          <Text style={rowStyles.name} numberOfLines={1}>
-            {stop.name}
-          </Text>
-          {stop.lines ? (
-            <Text style={rowStyles.sub} numberOfLines={1}>
-              {stop.isBRT ? stop.brtLine : stop.lines}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    </Pressable>
+    />
   );
+});
+
+// ─── Empty list fallback ──────────────────────────────────────────────────────
+const ListEmptyFallback = React.memo(function ListEmptyFallback({
+  isRTL,
+  title,
+  hint,
+}: {
+  isRTL: boolean;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <View style={[emptyStyles.wrap, isRTL && emptyStyles.wrapRTL]}>
+      <Text style={emptyStyles.title}>{title}</Text>
+      <Text style={emptyStyles.hint}>{hint}</Text>
+    </View>
+  );
+});
+
+const emptyStyles = StyleSheet.create({
+  wrap: { paddingVertical: SPACING * 2, paddingHorizontal: SPACING, gap: 8 },
+  wrapRTL: { alignItems: 'flex-end' },
+  title: { color: '#fff', fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  hint: { color: GRAY, fontSize: 13, lineHeight: 20, textAlign: 'center' },
 });
 
 const rowStyles = StyleSheet.create({
@@ -294,10 +382,16 @@ const rowStyles = StyleSheet.create({
   innerRTL: { flexDirection: 'row-reverse' },
   dot: { width: 11, height: 11, borderRadius: 6, flexShrink: 0 },
   dotInactive: { opacity: 0.45 },
-  textWrap: { flex: 1 },
-  textWrapRTL: { alignItems: 'flex-end' },
+  main: { flex: 1, minWidth: 0 },
+  mainRTL: { alignItems: 'flex-end' },
   name: { color: '#fff', fontSize: 14, fontWeight: '500' },
   sub: { color: GRAY, fontSize: 12, marginTop: 1 },
+  trailing: { flexShrink: 0, alignItems: 'flex-end', gap: 2, maxWidth: '38%' },
+  trailingRTL: { alignItems: 'flex-start' },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  typeRowRTL: { flexDirection: 'row-reverse' },
+  type: { fontSize: 11, fontWeight: '600' },
+  city: { color: GRAY, fontSize: 11 },
 });
 
 // ─── Route info bar ───────────────────────────────────────────────────────────
@@ -349,10 +443,12 @@ const StationDetail = React.memo(function StationDetail({
   station,
   isRTL,
   sheetRef,
+  onBackToList,
 }: {
   station: Station;
   isRTL: boolean;
   sheetRef: React.RefObject<TrueSheet | null>;
+  onBackToList: () => void;
 }) {
   const { t } = useI18n();
   const {
@@ -363,7 +459,6 @@ const StationDetail = React.memo(function StationDetail({
     userLocation,
     fetchRoute,
     clearRoute,
-    selectStation,
   } = useStations();
 
   const handleDirections = async () => {
@@ -374,12 +469,6 @@ const StationDetail = React.memo(function StationDetail({
   const handleOpenMaps = () => {
     const [lng, lat] = station.coordinates;
     openMapsDirections(lat, lng, isRTL ? station.name.fa : station.name.en);
-  };
-
-  const handleClose = () => {
-    clearRoute();
-    selectStation(null);
-    sheetRef.current?.resize(0);
   };
 
   return (
@@ -444,7 +533,7 @@ const StationDetail = React.memo(function StationDetail({
         icon={isRTL ? ArrowRight : ArrowLeft}
         isRTL={isRTL}
         variant="secondary"
-        onPress={handleClose}
+        onPress={onBackToList}
       />
     </View>
   );
@@ -499,11 +588,13 @@ const BusStopDetail = React.memo(function BusStopDetail({
   isBRT,
   isRTL,
   sheetRef,
+  onBackToList,
 }: {
   stop: BusStop;
   isBRT: boolean;
   isRTL: boolean;
   sheetRef: React.RefObject<TrueSheet | null>;
+  onBackToList: () => void;
 }) {
   const { t } = useI18n();
   const {
@@ -514,7 +605,6 @@ const BusStopDetail = React.memo(function BusStopDetail({
     userLocation,
     fetchRoute,
     clearRoute,
-    selectItem,
   } = useStations();
 
   const displayName =
@@ -530,12 +620,6 @@ const BusStopDetail = React.memo(function BusStopDetail({
   const handleOpenMaps = () => {
     const [lng, lat] = stop.coordinate;
     openMapsDirections(lat, lng, displayName);
-  };
-
-  const handleClose = () => {
-    clearRoute();
-    selectItem(null);
-    sheetRef.current?.resize(0);
   };
 
   return (
@@ -608,7 +692,7 @@ const BusStopDetail = React.memo(function BusStopDetail({
         icon={isRTL ? ArrowRight : ArrowLeft}
         isRTL={isRTL}
         variant="secondary"
-        onPress={handleClose}
+        onPress={onBackToList}
       />
     </View>
   );
@@ -631,8 +715,11 @@ const SheetSectionInner = () => {
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
   const { t, isRTL } = useI18n();
+  const { city } = useCity();
   const { isVisible } = useMapLayers();
   const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
+
+  const cityLabel = isRTL ? city.name.fa : city.name.en;
 
   // ── Debounced query ──────────────────────────────────────────────────────────
   const [debouncedQuery, setDebouncedQuery] = React.useState('');
@@ -672,8 +759,8 @@ const SheetSectionInner = () => {
   );
 
   const brtItems = React.useMemo(
-    (): ListItem[] => busResults.brt.map((s) => ({ kind: 'brt', stop: s })),
-    [busResults.brt]
+    (): ListItem[] => listBrtStops(searchQuery).map((s) => ({ kind: 'brt', stop: s })),
+    [searchQuery]
   );
 
   const busItems = React.useMemo(
@@ -730,6 +817,15 @@ const SheetSectionInner = () => {
     sheetRef.current?.resize(0);
   }, [selectItem]);
 
+  const handleBackToList = React.useCallback(() => {
+    selectItem(null);
+    setSearchQuery('');
+    setDebouncedQuery('');
+    setIsSearching(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    sheetRef.current?.resize(1);
+  }, [selectItem, setSearchQuery]);
+
   // ── Renderers ────────────────────────────────────────────────────────────────
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: Section }) => (
@@ -744,6 +840,8 @@ const SheetSectionInner = () => {
         return (
           <MetroRow
             station={item.station}
+            cityLabel={cityLabel}
+            typeLabel={t.layerMetro}
             isRTL={isRTL}
             onPress={() => handleStationPress(item.station)}
           />
@@ -753,6 +851,9 @@ const SheetSectionInner = () => {
         return (
           <BusRow
             stop={item.stop}
+            cityLabel={cityLabel}
+            typeLabel={item.kind === 'brt' ? t.layerBrt : t.layerBus}
+            typeKind={item.kind}
             isRTL={isRTL}
             onPress={() => handleBusStopPress(item.stop, item.kind)}
           />
@@ -760,7 +861,7 @@ const SheetSectionInner = () => {
       }
       return null;
     },
-    [isRTL, handleStationPress, handleBusStopPress]
+    [isRTL, cityLabel, t.layerMetro, t.layerBrt, t.layerBus, handleStationPress, handleBusStopPress]
   );
 
   const keyExtractor = React.useCallback(
@@ -771,7 +872,7 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
 
-  const showStationList = !selected && !isSearching && !(sections.length === 0 && hasQuery);
+  const showStationList = !selected && !isSearching && sections.length > 0;
 
   return (
     <>
@@ -797,22 +898,30 @@ const SheetSectionInner = () => {
           />
         }>
         {selected?.kind === 'metro' ? (
-          <StationDetail station={selected.station} isRTL={isRTL} sheetRef={sheetRef} />
+          <StationDetail
+            station={selected.station}
+            isRTL={isRTL}
+            sheetRef={sheetRef}
+            onBackToList={handleBackToList}
+          />
         ) : selected?.kind === 'brt' || selected?.kind === 'bus' ? (
           <BusStopDetail
             stop={selected.stop}
             isBRT={selected.kind === 'brt'}
             isRTL={isRTL}
             sheetRef={sheetRef}
+            onBackToList={handleBackToList}
           />
         ) : isSearching ? (
           <View style={styles.centered}>
             <ActivityIndicator size="small" color={GRAY} />
           </View>
-        ) : sections.length === 0 && hasQuery ? (
-          <View style={styles.centered}>
-            <Text style={styles.emptyText}>{t.noResults}</Text>
-          </View>
+        ) : sections.length === 0 ? (
+          <ListEmptyFallback
+            isRTL={isRTL}
+            title={hasQuery ? t.noResults : t.emptyListTitle}
+            hint={hasQuery ? t.noResultsHint : t.emptyListHint}
+          />
         ) : (
           <SectionList
             sections={sections}
