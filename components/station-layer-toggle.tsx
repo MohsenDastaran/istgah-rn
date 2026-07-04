@@ -18,12 +18,15 @@ const ICON_ACTIVE = '#ffffff';
 const ICON_INACTIVE = 'rgba(255, 255, 255, 0.5)';
 
 export function StationLayerToggle() {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const { visibleLayers, toggleLayer } = useMapLayers();
   const lastIndex = LAYER_KEYS.length - 1;
 
+  const roundStart = isRTL ? styles.segmentEnd : styles.segmentStart;
+  const roundEnd = isRTL ? styles.segmentStart : styles.segmentEnd;
+
   return (
-    <View style={styles.track}>
+    <View style={[styles.track, isRTL && styles.trackRTL]}>
       {LAYER_KEYS.map((key, index) => {
         const selected = visibleLayers.has(key);
         const prevKey = index > 0 ? LAYER_KEYS[index - 1] : null;
@@ -40,10 +43,11 @@ export function StationLayerToggle() {
               onPress={() => toggleLayer(key)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              accessibilityLabel={t[LAYER_META[key].labelKey]}
               style={({ pressed }) => [
                 styles.segment,
-                isFirst && styles.segmentFirst,
-                isLast && styles.segmentLast,
+                isFirst && roundStart,
+                isLast && roundEnd,
                 selected && styles.segmentSelected,
                 pressed && !selected && styles.segmentPressed,
                 pressed && selected && styles.segmentSelectedPressed,
@@ -83,6 +87,9 @@ const styles = StyleSheet.create({
       android: { elevation: 6 },
     }),
   },
+  trackRTL: {
+    flexDirection: 'row-reverse',
+  },
   segment: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -93,11 +100,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  segmentFirst: {
+  segmentStart: {
     borderTopLeftRadius: TRACK_RADIUS,
     borderBottomLeftRadius: TRACK_RADIUS,
   },
-  segmentLast: {
+  segmentEnd: {
     borderTopRightRadius: TRACK_RADIUS,
     borderBottomRightRadius: TRACK_RADIUS,
   },

@@ -57,8 +57,8 @@ function SettingsRow({
   children: React.ReactNode;
 }) {
   return (
-    <View className="flex-row items-center justify-between gap-3">
-      <View className="flex-1 flex-row items-center gap-2">
+    <View className="flex-row items-center justify-between gap-3 rtl:flex-row-reverse">
+      <View className="flex-1 flex-row items-center gap-2 rtl:flex-row-reverse">
         <Icon as={IconComp} className="text-muted-foreground size-4" />
         <Text className="text-sm font-medium">{label}</Text>
       </View>
@@ -80,7 +80,7 @@ function FooterLinkTrigger({
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center gap-2.5 rounded-md px-1 py-2 active:opacity-60">
+      className="flex-row items-center gap-2.5 rounded-md px-1 py-2 active:opacity-60 rtl:flex-row-reverse">
       <Icon as={IconComp} className="text-muted-foreground size-4" />
       <Text className="text-muted-foreground text-sm">{label}</Text>
     </Pressable>
@@ -89,6 +89,7 @@ function FooterLinkTrigger({
 
 // ─── Report Issue Dialog ──────────────────────────────────────────────────────
 function ReportIssueDialog() {
+  const { t, isRTL } = useI18n();
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -97,35 +98,31 @@ function ReportIssueDialog() {
         <View>
           <FooterLinkTrigger
             icon={CircleAlert}
-            label="Report an Issue"
+            label={t.reportIssue}
             onPress={() => setOpen(true)}
           />
         </View>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent style={isRTL ? { direction: 'rtl' } : undefined}>
         <DialogHeader>
-          <DialogTitle>Report an Issue</DialogTitle>
-          <DialogDescription>
-            Found a bug or want to suggest a new feature? You can open an issue directly on GitHub.
-          </DialogDescription>
+          <DialogTitle>{t.reportIssue}</DialogTitle>
+          <DialogDescription>{t.reportIssueDescription}</DialogDescription>
         </DialogHeader>
-        <Text className="text-muted-foreground text-sm leading-relaxed">
-          Please describe the problem in as much detail as possible — including what you expected to
-          happen, what actually happened, and the steps to reproduce it.
-        </Text>
-        <DialogFooter>
+        <Text className="text-muted-foreground text-sm leading-relaxed">{t.reportIssueBody}</Text>
+        <DialogFooter className="rtl:flex-row-reverse">
           <DialogClose asChild>
             <Button variant="outline">
-              <Text>Cancel</Text>
+              <Text>{t.cancel}</Text>
             </Button>
           </DialogClose>
           <Button
+            className="rtl:flex-row-reverse"
             onPress={() => {
               Linking.openURL('https://github.com/MohsenDastaran/istgah-rn/issues/new');
               setOpen(false);
             }}>
             <Icon as={ExternalLink} className="text-primary-foreground size-4" />
-            <Text>Open GitHub Issues</Text>
+            <Text>{t.openGitHubIssues}</Text>
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -135,56 +132,48 @@ function ReportIssueDialog() {
 
 // ─── About Dialog ─────────────────────────────────────────────────────────────
 function AboutDialog() {
+  const { t, isRTL } = useI18n();
   const [open, setOpen] = React.useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <View>
-          <FooterLinkTrigger icon={Info} label="About" onPress={() => setOpen(true)} />
+          <FooterLinkTrigger icon={Info} label={t.about} onPress={() => setOpen(true)} />
         </View>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent style={isRTL ? { direction: 'rtl' } : undefined}>
         <DialogHeader>
-          <DialogTitle>About Istgah</DialogTitle>
-          <DialogDescription>
-            Tehran Metro companion app — offline-ready, fast, and open source.
-          </DialogDescription>
+          <DialogTitle>{t.aboutTitle}</DialogTitle>
+          <DialogDescription>{t.aboutDescription}</DialogDescription>
         </DialogHeader>
 
         <View className="gap-3">
           <View className="gap-1">
-            <Text className="text-foreground text-sm font-semibold">Developer</Text>
-            <Text className="text-muted-foreground text-sm">Mohsen Dastaran</Text>
+            <Text className="text-foreground text-sm font-semibold">{t.developer}</Text>
+            <Text className="text-muted-foreground text-sm">{t.developerName}</Text>
           </View>
 
           <View className="gap-1">
-            <Text className="text-foreground text-sm font-semibold">What is Istgah?</Text>
-            <Text className="text-muted-foreground text-sm leading-relaxed">
-              Istgah (ایستگاه, meaning "Station") is an open-source mobile app for navigating
-              Tehran's metro network. It shows all stations, metro lines, interchanges, and helps
-              you get directions.
-            </Text>
+            <Text className="text-foreground text-sm font-semibold">{t.whatIsIstgah}</Text>
+            <Text className="text-muted-foreground text-sm leading-relaxed">{t.aboutBody}</Text>
           </View>
         </View>
 
-        <DialogFooter>
-          {/* <DialogClose asChild>
-            <Button variant="outline">
-              <Text>Close</Text>
-            </Button>
-          </DialogClose> */}
+        <DialogFooter className="rtl:flex-row-reverse">
           <Button
             variant="outline"
+            className="rtl:flex-row-reverse"
             onPress={() => Linking.openURL('https://github.com/MohsenDastaran')}>
             <Icon as={User2} className="text-foreground size-4" />
-            <Text>Developer's GitHub Profile</Text>
+            <Text>{t.developerGitHub}</Text>
           </Button>
           <Button
             variant="outline"
+            className="rtl:flex-row-reverse"
             onPress={() => Linking.openURL('https://github.com/MohsenDastaran/istgah-rn')}>
             <Icon as={Code} className="text-foreground size-4" />
-            <Text>App Source Code</Text>
+            <Text>{t.appSourceCode}</Text>
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -207,18 +196,18 @@ export function SettingsPanel() {
   };
 
   const langOptions: Option[] = [
-    { value: 'en', label: 'English' },
-    { value: 'fa', label: 'فارسی' },
+    { value: 'en', label: t.english },
+    { value: 'fa', label: t.persian },
   ];
 
   const themeOptions: Option[] = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
+    { value: 'light', label: t.themeLight },
+    { value: 'dark', label: t.themeDark },
   ];
 
   const cityOptions: Option[] = CITY_IDS.map((id) => ({
     value: id,
-    label: isRTL ? CITIES[id].name.fa : CITIES[id].name.en,
+    label: CITIES[id].name[lang],
   }));
 
   const selectedLang = langOptions.find((o) => o.value === lang);
@@ -232,21 +221,23 @@ export function SettingsPanel() {
           variant="ghost"
           size="icon"
           className="size-9 rounded-full active:bg-foreground/10"
-          accessibilityLabel="Settings">
+          accessibilityLabel={t.settings}>
           <Icon as={Settings} className="text-foreground size-[22px]" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-72" side="bottom" align="end">
+      <PopoverContent
+        className="w-72"
+        style={isRTL ? { direction: 'rtl' } : undefined}
+        side="bottom"
+        align={isRTL ? 'start' : 'end'}>
         <View className="gap-4">
-          {/* Header */}
-          <Text className="text-foreground text-base font-semibold">Settings</Text>
+          <Text className="text-foreground text-base font-semibold">{t.settings}</Text>
 
-          {/* Language */}
-          <SettingsRow icon={Globe} label="Language">
+          <SettingsRow icon={Globe} label={t.language}>
             <Select value={selectedLang} onValueChange={(opt) => opt && setLang(opt.value as Lang)}>
               <SelectTrigger className="w-32">
-                <SelectValue placeholder="Language" />
+                <SelectValue placeholder={t.language} />
               </SelectTrigger>
               <SelectContent insets={contentInsets} className="w-32">
                 <SelectGroup>
@@ -260,13 +251,12 @@ export function SettingsPanel() {
             </Select>
           </SettingsRow>
 
-          {/* Theme */}
-          <SettingsRow icon={Palette} label="Theme">
+          <SettingsRow icon={Palette} label={t.theme}>
             <Select
               value={selectedTheme}
               onValueChange={(opt) => opt && Uniwind.setTheme(opt.value as 'light' | 'dark')}>
               <SelectTrigger className="w-32">
-                <SelectValue placeholder="Theme" />
+                <SelectValue placeholder={t.theme} />
               </SelectTrigger>
               <SelectContent insets={contentInsets} className="w-32">
                 <SelectGroup>
@@ -280,7 +270,6 @@ export function SettingsPanel() {
             </Select>
           </SettingsRow>
 
-          {/* Default city */}
           <SettingsRow icon={MapPin} label={t.defaultCity}>
             <Select
               value={selectedCity}
@@ -302,7 +291,6 @@ export function SettingsPanel() {
 
           <Divider />
 
-          {/* Footer links */}
           <View className="gap-0.5">
             <ReportIssueDialog />
             <AboutDialog />

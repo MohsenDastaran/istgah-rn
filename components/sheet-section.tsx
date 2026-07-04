@@ -1,4 +1,3 @@
-import { Input } from '@/components/ui/input';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text as UiText } from '@/components/ui/text';
@@ -10,7 +9,7 @@ import {
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
 import { useCity } from '@/lib/city-context';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, type Lang } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { sheetDetentFraction, useSheetDetent } from '@/lib/sheet-detent-context';
 import { openMapsDirections } from '@/lib/maps';
@@ -19,7 +18,6 @@ import type { Station } from '@/lib/stations';
 import { type BusStop, listBrtStops, searchBusStops } from '@/lib/bus-stops';
 import {
   ArrowLeft,
-  ArrowRight,
   Bus,
   ExternalLink,
   Navigation2,
@@ -41,7 +39,6 @@ import {
   View,
   useWindowDimensions,
   type SectionListData,
-  type TextStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -55,28 +52,34 @@ const SPACING = 16;
 const GAP = 12;
 const INPUT_HEIGHT = SPACING * 3;
 const HEADER_HEIGHT = SPACING * 5;
-const ROW_HEIGHT = 52;
 
 const DARK = '#282e37';
 const GRAY = '#b2bac8';
 const LIGHT_GRAY = '#ebedf1';
 
+function busStopDisplayName(stop: BusStop, lang: Lang): string {
+  return lang === 'fa' || !stop.latinName ? stop.name : stop.latinName;
+}
+
 // ─── Sheet Header ─────────────────────────────────────────────────────────────
 interface SheetHeaderProps {
   placeholder: string;
-  isRTL: boolean;
+  clearLabel: string;
   onChangeText: (text: string) => void;
   value: string;
 }
 
-const SheetHeader = ({ placeholder, isRTL, onChangeText, value }: SheetHeaderProps) => (
-  <Animated.View style={headerStyles.container}>
-    <View style={[headerStyles.inputWrap, isRTL && headerStyles.inputWrapRTL]}>
+const SheetHeader = ({ placeholder, clearLabel, onChangeText, value }: SheetHeaderProps) => {
+  const { isRTL } = useI18n();
+
+  return (
+    <Animated.View style={[headerStyles.container, isRTL && headerStyles.containerRTL]}>
+    <View className="flex-row items-center gap-2 rounded-full px-4 rtl:flex-row-reverse" style={headerStyles.inputWrap}>
       <TextInput
-        style={[headerStyles.input, isRTL && headerStyles.rtlInput]}
+        className="h-full min-h-0 flex-1 p-0 text-base text-white rtl:text-right"
+        style={headerStyles.input}
         placeholder={placeholder}
         placeholderTextColor={LIGHT_GRAY}
-        textAlign={isRTL ? 'right' : 'left'}
         value={value}
         onChangeText={onChangeText}
         returnKeyType="search"
@@ -86,13 +89,14 @@ const SheetHeader = ({ placeholder, isRTL, onChangeText, value }: SheetHeaderPro
           onPress={() => onChangeText('')}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Clear search">
+          accessibilityLabel={clearLabel}>
           <X size={18} color={LIGHT_GRAY} strokeWidth={2.25} />
         </Pressable>
       )}
     </View>
-  </Animated.View>
-);
+    </Animated.View>
+  );
+};
 
 const headerStyles = StyleSheet.create({
   container: {
@@ -101,29 +105,20 @@ const headerStyles = StyleSheet.create({
     justifyContent: 'center',
     padding: SPACING,
   },
+  containerRTL: { direction: 'rtl' },
   inputWrap: {
     backgroundColor: Platform.select({
       ios: 'rgba(0, 0, 0, 0.5)',
       default: 'rgba(0, 0, 0, 0.3)',
     }),
-    paddingHorizontal: SPACING,
     height: INPUT_HEIGHT,
     borderRadius: INPUT_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
-  inputWrapRTL: { flexDirection: 'row-reverse' },
   input: {
-    flex: 1,
     fontSize: 16,
     height: INPUT_HEIGHT,
     color: 'white',
-    padding: 0,
   },
-  rtlInput: {
-    writingDirection: 'rtl',
-  } as TextStyle,
 });
 
 // ─── Detail action button ─────────────────────────────────────────────────────
@@ -131,18 +126,18 @@ type DetailActionButtonProps = Omit<ButtonProps, 'children'> & {
   label: string;
   icon?: LucideIcon;
   hint?: string;
-  isRTL?: boolean;
   loading?: boolean;
   tone?: 'primary' | 'secondary';
+  flipIconRtl?: boolean;
 };
 
 function DetailActionButton({
   label,
   icon,
   hint,
-  isRTL,
   loading,
   tone = 'primary',
+  flipIconRtl,
   className,
   ...props
 }: DetailActionButtonProps) {
@@ -150,12 +145,12 @@ function DetailActionButton({
     <View className="gap-1">
       <Button
         variant={tone === 'secondary' ? 'outline' : 'default'}
-        className={cn('h-12 w-full rounded-full', isRTL && 'flex-row-reverse', className)}
+        className={cn('h-12 w-full rounded-full rtl:flex-row-reverse', className)}
         {...props}>
         {loading ? (
           <ActivityIndicator size="small" color={tone === 'secondary' ? GRAY : '#ffffff'} />
         ) : icon ? (
-          <Icon as={icon} className="size-[18px]" />
+          <Icon as={icon} className={cn('size-[18px]', flipIconRtl && 'rtl:rotate-180')} />
         ) : null}
         <UiText>{label}</UiText>
       </Button>
@@ -171,7 +166,7 @@ function DetailActionButton({
 // ─── Category header ──────────────────────────────────────────────────────────
 const CategoryHeader = React.memo(function CategoryHeader({
   label,
-  icon: Icon,
+  icon: IconComp,
   color,
 }: {
   label: string;
@@ -179,25 +174,13 @@ const CategoryHeader = React.memo(function CategoryHeader({
   color: string;
 }) {
   return (
-    <View style={catStyles.header}>
-      <Icon size={13} color={color} strokeWidth={2.5} />
-      <Text style={[catStyles.label, { color }]}>{label}</Text>
+    <View className="mb-0.5 flex-row items-center gap-1.5 border-b border-white/10 px-0.5 py-2 rtl:flex-row-reverse">
+      <IconComp size={13} color={color} strokeWidth={2.5} />
+      <Text className="text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>
+        {label}
+      </Text>
     </View>
   );
-});
-
-const catStyles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 2,
-  },
-  label: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
 });
 
 const TYPE_META = {
@@ -217,7 +200,6 @@ const StationListRow = React.memo(function StationListRow({
   typeKind,
   dotColor,
   dotInactive,
-  isRTL,
   onPress,
 }: {
   name: string;
@@ -227,37 +209,37 @@ const StationListRow = React.memo(function StationListRow({
   typeKind: RowTypeKind;
   dotColor: string;
   dotInactive?: boolean;
-  isRTL: boolean;
   onPress: () => void;
 }) {
-  const { Icon, color: typeColor } = TYPE_META[typeKind];
+  const { Icon: TypeIcon, color: typeColor } = TYPE_META[typeKind];
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
-      <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
+      className="active:opacity-60 h-[52px] justify-center border-b border-white/10">
+      <View className="flex-row items-center gap-3 rtl:flex-row-reverse">
         <View
-          style={[rowStyles.dot, { backgroundColor: dotColor }, dotInactive && rowStyles.dotInactive]}
+          className={cn('size-[11px] shrink-0 rounded-full', dotInactive && 'opacity-45')}
+          style={{ backgroundColor: dotColor }}
         />
-        <View style={[rowStyles.main, isRTL && rowStyles.mainRTL]}>
-          <Text style={rowStyles.name} numberOfLines={1}>
+        <View className="min-w-0 flex-1 rtl:items-end">
+          <Text className="text-sm font-medium text-white" numberOfLines={1}>
             {name}
           </Text>
           {detail ? (
-            <Text style={rowStyles.sub} numberOfLines={1}>
+            <Text className="mt-px text-xs text-[#b2bac8]" numberOfLines={1}>
               {detail}
             </Text>
           ) : null}
         </View>
-        <View style={[rowStyles.trailing, isRTL && rowStyles.trailingRTL]}>
-          <View style={[rowStyles.typeRow, isRTL && rowStyles.typeRowRTL]}>
-            <Icon size={12} color={typeColor} strokeWidth={2.5} />
-            <Text style={[rowStyles.type, { color: typeColor }]} numberOfLines={1}>
+        <View className="max-w-[38%] shrink-0 items-end gap-0.5 rtl:items-start">
+          <View className="flex-row items-center gap-1 rtl:flex-row-reverse">
+            <TypeIcon size={12} color={typeColor} strokeWidth={2.5} />
+            <Text className="text-[11px] font-semibold" style={{ color: typeColor }} numberOfLines={1}>
               {typeLabel}
             </Text>
           </View>
-          <Text style={rowStyles.city} numberOfLines={1}>
+          <Text className="text-[11px] text-[#b2bac8]" numberOfLines={1}>
             {cityLabel}
           </Text>
         </View>
@@ -271,25 +253,24 @@ const MetroRow = React.memo(function MetroRow({
   station,
   cityLabel,
   typeLabel,
-  isRTL,
+  lang,
   onPress,
 }: {
   station: Station;
   cityLabel: string;
   typeLabel: string;
-  isRTL: boolean;
+  lang: Lang;
   onPress: () => void;
 }) {
   return (
     <StationListRow
-      name={isRTL ? station.name.fa : station.name.en}
+      name={station.name[lang]}
       detail={station.line}
       cityLabel={cityLabel}
       typeLabel={typeLabel}
       typeKind="metro"
       dotColor={station.lineColor}
       dotInactive={!station.isActive}
-      isRTL={isRTL}
       onPress={onPress}
     />
   );
@@ -301,17 +282,17 @@ const BusRow = React.memo(function BusRow({
   cityLabel,
   typeLabel,
   typeKind,
-  isRTL,
+  lang,
   onPress,
 }: {
   stop: BusStop;
   cityLabel: string;
   typeLabel: string;
   typeKind: 'brt' | 'bus';
-  isRTL: boolean;
+  lang: Lang;
   onPress: () => void;
 }) {
-  const name = isRTL || !stop.latinName ? stop.name : stop.latinName;
+  const name = busStopDisplayName(stop, lang);
   const detail = stop.isBRT ? stop.brtLine : stop.lines;
   const dotColor = stop.isBRT ? '#f97316' : '#64748b';
 
@@ -323,7 +304,6 @@ const BusRow = React.memo(function BusRow({
       typeLabel={typeLabel}
       typeKind={typeKind}
       dotColor={dotColor}
-      isRTL={isRTL}
       onPress={onPress}
     />
   );
@@ -331,51 +311,18 @@ const BusRow = React.memo(function BusRow({
 
 // ─── Empty list fallback ──────────────────────────────────────────────────────
 const ListEmptyFallback = React.memo(function ListEmptyFallback({
-  isRTL,
   title,
   hint,
 }: {
-  isRTL: boolean;
   title: string;
   hint: string;
 }) {
   return (
-    <View style={[emptyStyles.wrap, isRTL && emptyStyles.wrapRTL]}>
-      <Text style={emptyStyles.title}>{title}</Text>
-      <Text style={emptyStyles.hint}>{hint}</Text>
+    <View className="gap-2 px-4 py-8">
+      <Text className="text-center text-[15px] font-semibold text-white">{title}</Text>
+      <Text className="text-center text-[13px] leading-5 text-[#b2bac8]">{hint}</Text>
     </View>
   );
-});
-
-const emptyStyles = StyleSheet.create({
-  wrap: { paddingVertical: SPACING * 2, paddingHorizontal: SPACING, gap: 8 },
-  wrapRTL: { alignItems: 'flex-end' },
-  title: { color: '#fff', fontSize: 15, fontWeight: '600', textAlign: 'center' },
-  hint: { color: GRAY, fontSize: 13, lineHeight: 20, textAlign: 'center' },
-});
-
-const rowStyles = StyleSheet.create({
-  row: {
-    height: ROW_HEIGHT,
-    justifyContent: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-  },
-  pressed: { opacity: 0.6 },
-  inner: { flexDirection: 'row', alignItems: 'center', gap: GAP },
-  innerRTL: { flexDirection: 'row-reverse' },
-  dot: { width: 11, height: 11, borderRadius: 6, flexShrink: 0 },
-  dotInactive: { opacity: 0.45 },
-  main: { flex: 1, minWidth: 0 },
-  mainRTL: { alignItems: 'flex-end' },
-  name: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  sub: { color: GRAY, fontSize: 12, marginTop: 1 },
-  trailing: { flexShrink: 0, alignItems: 'flex-end', gap: 2, maxWidth: '38%' },
-  trailingRTL: { alignItems: 'flex-start' },
-  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  typeRowRTL: { flexDirection: 'row-reverse' },
-  type: { fontSize: 11, fontWeight: '600' },
-  city: { color: GRAY, fontSize: 11 },
 });
 
 // ─── Route info bar ───────────────────────────────────────────────────────────
@@ -384,53 +331,44 @@ const RouteInfoBar = React.memo(function RouteInfoBar({
   duration,
   distanceLabel,
   durationLabel,
-  isRTL,
+  kmUnit,
+  minUnit,
 }: {
   distance: number;
   duration: number;
   distanceLabel: string;
   durationLabel: string;
-  isRTL: boolean;
+  kmUnit: string;
+  minUnit: string;
 }) {
   return (
-    <View style={[routeStyles.bar, isRTL && routeStyles.barRTL]}>
-      <View style={routeStyles.cell}>
-        <Text style={routeStyles.label}>{distanceLabel}</Text>
-        <Text style={routeStyles.value}>{distance.toFixed(1)} km</Text>
+    <View className="flex-row rounded-2xl bg-white/10 px-4 py-3 rtl:flex-row-reverse">
+      <View className="flex-1 items-center">
+        <Text className="mb-1 text-[11px] text-[#b2bac8]">{distanceLabel}</Text>
+        <Text className="text-base font-semibold text-white">
+          {distance.toFixed(1)} {kmUnit}
+        </Text>
       </View>
-      <View style={routeStyles.divider} />
-      <View style={routeStyles.cell}>
-        <Text style={routeStyles.label}>{durationLabel}</Text>
-        <Text style={routeStyles.value}>{Math.round(duration)} min</Text>
+      <View className="w-px bg-white/20" />
+      <View className="flex-1 items-center">
+        <Text className="mb-1 text-[11px] text-[#b2bac8]">{durationLabel}</Text>
+        <Text className="text-base font-semibold text-white">
+          {Math.round(duration)} {minUnit}
+        </Text>
       </View>
     </View>
   );
 });
 
-const routeStyles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: SPACING,
-    paddingVertical: SPACING * 0.75,
-    paddingHorizontal: SPACING,
-  },
-  barRTL: { flexDirection: 'row-reverse' },
-  cell: { flex: 1, alignItems: 'center' },
-  divider: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.2)' },
-  label: { color: GRAY, fontSize: 11, marginBottom: 4 },
-  value: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});
-
 // ─── Station detail ───────────────────────────────────────────────────────────
 const StationDetail = React.memo(function StationDetail({
   station,
-  isRTL,
+  lang,
   sheetRef,
   onBackToList,
 }: {
   station: Station;
-  isRTL: boolean;
+  lang: Lang;
   sheetRef: React.RefObject<TrueSheet | null>;
   onBackToList: () => void;
 }) {
@@ -462,22 +400,19 @@ const StationDetail = React.memo(function StationDetail({
 
   const handleOpenMaps = () => {
     const [lng, lat] = station.coordinates;
-    openMapsDirections(lat, lng, isRTL ? station.name.fa : station.name.en);
+    openMapsDirections(lat, lng, station.name[lang]);
   };
 
   return (
     <View style={{ gap: GAP }}>
-      <View style={[detailStyles.header, isRTL && detailStyles.headerRTL]}>
+      <View className="mb-2 flex-row items-center gap-3 rtl:flex-row-reverse">
         <View
-          style={[
-            detailStyles.dot,
-            { backgroundColor: station.lineColor },
-            !station.isActive && detailStyles.dotInactive,
-          ]}
+          className={cn('size-[18px] shrink-0 rounded-full', !station.isActive && 'opacity-55')}
+          style={{ backgroundColor: station.lineColor }}
         />
-        <View style={[detailStyles.textWrap, isRTL && detailStyles.textWrapRTL]}>
-          <Text style={detailStyles.name}>{isRTL ? station.name.fa : station.name.en}</Text>
-          <Text style={detailStyles.line}>{station.line}</Text>
+        <View className="flex-1 rtl:items-end">
+          <Text className="text-lg font-semibold text-white">{station.name[lang]}</Text>
+          <Text className="mt-0.5 text-[13px] text-[#b2bac8]">{station.line}</Text>
         </View>
       </View>
 
@@ -487,7 +422,8 @@ const StationDetail = React.memo(function StationDetail({
           duration={routeDuration}
           distanceLabel={t.distance}
           durationLabel={t.duration}
-          isRTL={isRTL}
+          kmUnit={t.km}
+          minUnit={t.min}
         />
       )}
 
@@ -496,7 +432,6 @@ const StationDetail = React.memo(function StationDetail({
           <DetailActionButton
             label={t.getDirections}
             icon={Navigation2}
-            isRTL={isRTL}
             loading={routeLoading}
             disabled={routeLoading}
             onPress={handlePrimaryPress}
@@ -505,7 +440,6 @@ const StationDetail = React.memo(function StationDetail({
           <DetailActionButton
             label={t.openInMaps}
             icon={ExternalLink}
-            isRTL={isRTL}
             tone="secondary"
             onPress={handleOpenMaps}
           />
@@ -516,7 +450,6 @@ const StationDetail = React.memo(function StationDetail({
         <DetailActionButton
           label={t.clearRoute}
           icon={RouteOff}
-          isRTL={isRTL}
           tone="secondary"
           onPress={clearRoute}
         />
@@ -524,8 +457,8 @@ const StationDetail = React.memo(function StationDetail({
 
       <DetailActionButton
         label={t.backToList}
-        icon={isRTL ? ArrowRight : ArrowLeft}
-        isRTL={isRTL}
+        icon={ArrowLeft}
+        flipIconRtl
         tone="secondary"
         onPress={onBackToList}
       />
@@ -533,45 +466,12 @@ const StationDetail = React.memo(function StationDetail({
   );
 });
 
-const detailStyles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: GAP, marginBottom: SPACING / 2 },
-  headerRTL: { flexDirection: 'row-reverse' },
-  dot: { width: 18, height: 18, borderRadius: 9, flexShrink: 0 },
-  dotInactive: { opacity: 0.55 },
-  textWrap: { flex: 1 },
-  textWrapRTL: { alignItems: 'flex-end' },
-  name: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  line: { color: GRAY, fontSize: 13, marginTop: 2 },
-  dotMedium: { width: 14, height: 14, borderRadius: 7, flexShrink: 0 },
-  dotSmall: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
-  infoBlock: { gap: 6, marginBottom: SPACING / 2 },
-  infoRow: { gap: 2 },
-  infoLabel: { color: GRAY, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 },
-  infoValue: { color: '#fff', fontSize: 13, lineHeight: 18 },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(249,115,22,0.2)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: { color: '#fb923c', fontSize: 11, fontWeight: '600' },
-});
-
-const InfoRow = React.memo(function InfoRow({
-  label,
-  value,
-  isRTL,
-}: {
-  label: string;
-  value: string;
-  isRTL: boolean;
-}) {
+const InfoRow = React.memo(function InfoRow({ label, value }: { label: string; value: string }) {
   if (!value.trim()) return null;
   return (
-    <View style={[detailStyles.infoRow, isRTL && detailStyles.textWrapRTL]}>
-      <Text style={detailStyles.infoLabel}>{label}</Text>
-      <Text style={detailStyles.infoValue}>{value}</Text>
+    <View className="gap-0.5 rtl:items-end">
+      <Text className="text-[11px] uppercase tracking-wide text-[#b2bac8]">{label}</Text>
+      <Text className="text-[13px] leading-[18px] text-white">{value}</Text>
     </View>
   );
 });
@@ -580,13 +480,13 @@ const InfoRow = React.memo(function InfoRow({
 const BusStopDetail = React.memo(function BusStopDetail({
   stop,
   isBRT,
-  isRTL,
+  lang,
   sheetRef,
   onBackToList,
 }: {
   stop: BusStop;
   isBRT: boolean;
-  isRTL: boolean;
+  lang: Lang;
   sheetRef: React.RefObject<TrueSheet | null>;
   onBackToList: () => void;
 }) {
@@ -602,10 +502,9 @@ const BusStopDetail = React.memo(function BusStopDetail({
     locateUser,
   } = useStations();
 
-  const displayName =
-    isRTL || !stop.latinName ? stop.name : stop.latinName;
+  const displayName = busStopDisplayName(stop, lang);
   const dotColor = isBRT ? '#f97316' : '#64748b';
-  const dotStyle = isBRT ? detailStyles.dotMedium : detailStyles.dotSmall;
+  const dotSizeClass = isBRT ? 'size-3.5' : 'size-2.5';
 
   const handleDirections = async () => {
     await fetchRoute();
@@ -628,26 +527,26 @@ const BusStopDetail = React.memo(function BusStopDetail({
 
   return (
     <View style={{ gap: GAP }}>
-      <View style={[detailStyles.header, isRTL && detailStyles.headerRTL]}>
-        <View style={[dotStyle, { backgroundColor: dotColor }]} />
-        <View style={[detailStyles.textWrap, isRTL && detailStyles.textWrapRTL]}>
-          <Text style={detailStyles.name}>{displayName}</Text>
-          <Text style={detailStyles.line}>
+      <View className="mb-2 flex-row items-center gap-3 rtl:flex-row-reverse">
+        <View className={cn('shrink-0 rounded-full', dotSizeClass)} style={{ backgroundColor: dotColor }} />
+        <View className="flex-1 rtl:items-end">
+          <Text className="text-lg font-semibold text-white">{displayName}</Text>
+          <Text className="mt-0.5 text-[13px] text-[#b2bac8]">
             {isBRT ? t.brtStops : t.busStops}
           </Text>
         </View>
       </View>
 
-      <View style={detailStyles.infoBlock}>
+      <View className="mb-2 gap-1.5">
         {isBRT && stop.brtLine ? (
-          <View style={[detailStyles.badge, isRTL && { alignSelf: 'flex-end' }]}>
-            <Text style={detailStyles.badgeText}>{stop.brtLine}</Text>
+          <View className="self-start rounded-md bg-orange-500/20 px-2 py-0.5 rtl:self-end">
+            <Text className="text-[11px] font-semibold text-orange-400">{stop.brtLine}</Text>
           </View>
         ) : null}
-        <InfoRow label={t.busLines} value={stop.lines} isRTL={isRTL} />
-        <InfoRow label={t.direction} value={stop.direction} isRTL={isRTL} />
-        <InfoRow label={t.stationCode} value={stop.stationCode} isRTL={isRTL} />
-        <InfoRow label={t.address} value={stop.address} isRTL={isRTL} />
+        <InfoRow label={t.busLines} value={stop.lines} />
+        <InfoRow label={t.direction} value={stop.direction} />
+        <InfoRow label={t.stationCode} value={stop.stationCode} />
+        <InfoRow label={t.address} value={stop.address} />
       </View>
 
       {route && routeDistance != null && routeDuration != null && (
@@ -656,7 +555,8 @@ const BusStopDetail = React.memo(function BusStopDetail({
           duration={routeDuration}
           distanceLabel={t.distance}
           durationLabel={t.duration}
-          isRTL={isRTL}
+          kmUnit={t.km}
+          minUnit={t.min}
         />
       )}
 
@@ -665,7 +565,6 @@ const BusStopDetail = React.memo(function BusStopDetail({
           <DetailActionButton
             label={t.getDirections}
             icon={Navigation2}
-            isRTL={isRTL}
             loading={routeLoading}
             disabled={routeLoading}
             onPress={handlePrimaryPress}
@@ -674,7 +573,6 @@ const BusStopDetail = React.memo(function BusStopDetail({
           <DetailActionButton
             label={t.openInMaps}
             icon={ExternalLink}
-            isRTL={isRTL}
             tone="secondary"
             onPress={handleOpenMaps}
           />
@@ -685,7 +583,6 @@ const BusStopDetail = React.memo(function BusStopDetail({
         <DetailActionButton
           label={t.clearRoute}
           icon={RouteOff}
-          isRTL={isRTL}
           tone="secondary"
           onPress={clearRoute}
         />
@@ -693,8 +590,8 @@ const BusStopDetail = React.memo(function BusStopDetail({
 
       <DetailActionButton
         label={t.backToList}
-        icon={isRTL ? ArrowRight : ArrowLeft}
-        isRTL={isRTL}
+        icon={ArrowLeft}
+        flipIconRtl
         tone="secondary"
         onPress={onBackToList}
       />
@@ -718,13 +615,13 @@ const SheetSectionInner = () => {
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
-  const { t, isRTL } = useI18n();
+  const { t, lang, isRTL } = useI18n();
   const { city } = useCity();
   const { isSheetVisible, isSheetLoading } = useMapLayers();
   const { setMapPaddingBottom } = useSheetDetent();
   const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
 
-  const cityLabel = isRTL ? city.name.fa : city.name.en;
+  const cityLabel = city.name[lang];
 
   // ── Debounced query ──────────────────────────────────────────────────────────
   const [debouncedQuery, setDebouncedQuery] = React.useState('');
@@ -876,7 +773,7 @@ const SheetSectionInner = () => {
             station={item.station}
             cityLabel={cityLabel}
             typeLabel={t.layerMetro}
-            isRTL={isRTL}
+            lang={lang}
             onPress={() => handleStationPress(item.station)}
           />
         );
@@ -888,14 +785,14 @@ const SheetSectionInner = () => {
             cityLabel={cityLabel}
             typeLabel={item.kind === 'brt' ? t.layerBrt : t.layerBus}
             typeKind={item.kind}
-            isRTL={isRTL}
+            lang={lang}
             onPress={() => handleBusStopPress(item.stop, item.kind)}
           />
         );
       }
       return null;
     },
-    [isRTL, cityLabel, t.layerMetro, t.layerBrt, t.layerBus, handleStationPress, handleBusStopPress]
+    [lang, cityLabel, t.layerMetro, t.layerBrt, t.layerBus, handleStationPress, handleBusStopPress]
   );
 
   const keyExtractor = React.useCallback(
@@ -904,7 +801,7 @@ const SheetSectionInner = () => {
     []
   );
 
-  const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
+  const contentStyle = [styles.content, isRTL && styles.contentRTL];
 
   const showStationList =
     !selected && !isSearching && !isSheetLoading && sections.length > 0;
@@ -927,7 +824,7 @@ const SheetSectionInner = () => {
         header={
           <SheetHeader
             placeholder={t.search}
-            isRTL={isRTL}
+            clearLabel={t.clearSearch}
             value={searchQuery}
             onChangeText={handleSearchChange}
           />
@@ -935,7 +832,7 @@ const SheetSectionInner = () => {
         {selected?.kind === 'metro' ? (
           <StationDetail
             station={selected.station}
-            isRTL={isRTL}
+            lang={lang}
             sheetRef={sheetRef}
             onBackToList={handleBackToList}
           />
@@ -943,7 +840,7 @@ const SheetSectionInner = () => {
           <BusStopDetail
             stop={selected.stop}
             isBRT={selected.kind === 'brt'}
-            isRTL={isRTL}
+            lang={lang}
             sheetRef={sheetRef}
             onBackToList={handleBackToList}
           />
@@ -953,7 +850,6 @@ const SheetSectionInner = () => {
           </View>
         ) : sections.length === 0 ? (
           <ListEmptyFallback
-            isRTL={isRTL}
             title={hasQuery ? t.noResults : t.emptyListTitle}
             hint={hasQuery ? t.noResultsHint : t.emptyListHint}
           />
@@ -972,7 +868,7 @@ const SheetSectionInner = () => {
             nestedScrollEnabled
             stickySectionHeadersEnabled={false}
             showsVerticalScrollIndicator={false}
-            extraData={isRTL}
+            extraData={lang}
             style={styles.list}
             contentContainerStyle={styles.listContent}
           />
@@ -985,10 +881,15 @@ const SheetSectionInner = () => {
         collapsable={false}>
         <Pressable
           disabled={currentDetent !== 1}
+          className={cn(
+            'absolute bottom-4 size-12 items-center justify-center rounded-full active:opacity-60',
+            'right-4 rtl:right-auto rtl:left-4',
+            Platform.OS === 'android' && 'elevation-8'
+          )}
           style={({ pressed }) => [styles.floatingBtn, pressed && styles.floatingBtnPressed]}
           onPress={handleSheetClose}
           accessibilityRole="button"
-          accessibilityLabel="Close sheet"
+          accessibilityLabel={t.closeSheet}
           hitSlop={8}>
           <View style={styles.floatingBtnContent}>
             <XIcon size={20} color="white" />
@@ -1018,9 +919,6 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   floatingBtn: {
-    position: 'absolute',
-    right: SPACING,
-    bottom: SPACING,
     height: SPACING * 3,
     width: SPACING * 3,
     borderRadius: (SPACING * 3) / 2,
@@ -1037,11 +935,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: { padding: SPACING, gap: GAP },
+  contentRTL: { direction: 'rtl' },
   list: { flex: 1 },
   listContent: { paddingBottom: SPACING },
   centered: { paddingVertical: SPACING, alignItems: 'center' },
-  emptyText: { color: GRAY, fontSize: 14 },
-  inputWrapRTL: {
-    flexDirection: 'row-reverse',
-  },
 });
