@@ -716,7 +716,7 @@ const SheetSectionInner = () => {
   const [currentDetent, setCurrentDetent] = React.useState(0);
   const { t, isRTL } = useI18n();
   const { city } = useCity();
-  const { isVisible } = useMapLayers();
+  const { isSheetVisible, isSheetLoading } = useMapLayers();
   const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
 
   const cityLabel = isRTL ? city.name.fa : city.name.en;
@@ -753,31 +753,31 @@ const SheetSectionInner = () => {
   // ── Section data ─────────────────────────────────────────────────────────────
   const hasQuery = debouncedQuery.trim().length > 0 || isSearching;
 
-  const metroItems = React.useMemo(
-    (): ListItem[] => filteredStations.map((s) => ({ kind: 'metro', station: s })),
-    [filteredStations]
-  );
+  const metroItems = React.useMemo((): ListItem[] => {
+    if (!isSheetVisible('metro')) return [];
+    return filteredStations.map((s) => ({ kind: 'metro', station: s }));
+  }, [filteredStations, isSheetVisible]);
 
-  const brtItems = React.useMemo(
-    (): ListItem[] => listBrtStops(searchQuery).map((s) => ({ kind: 'brt', stop: s })),
-    [searchQuery]
-  );
+  const brtItems = React.useMemo((): ListItem[] => {
+    if (!isSheetVisible('brt')) return [];
+    return listBrtStops(searchQuery).map((s) => ({ kind: 'brt', stop: s }));
+  }, [searchQuery, isSheetVisible]);
 
-  const busItems = React.useMemo(
-    (): ListItem[] => busResults.bus.map((s) => ({ kind: 'bus', stop: s })),
-    [busResults.bus]
-  );
+  const busItems = React.useMemo((): ListItem[] => {
+    if (!isSheetVisible('bus')) return [];
+    return busResults.bus.map((s) => ({ kind: 'bus', stop: s }));
+  }, [busResults.bus, isSheetVisible]);
 
   const sections = React.useMemo((): Section[] => {
     const result: Section[] = [];
-    if (isVisible('metro') && metroItems.length > 0)
+    if (isSheetVisible('metro') && metroItems.length > 0)
       result.push({ title: t.metroStations, icon: TrainFront, color: '#60a5fa', data: metroItems });
-    if (isVisible('brt') && brtItems.length > 0)
+    if (isSheetVisible('brt') && brtItems.length > 0)
       result.push({ title: t.brtStops, icon: Bus, color: '#fb923c', data: brtItems });
-    if (isVisible('bus') && busItems.length > 0)
+    if (isSheetVisible('bus') && busItems.length > 0)
       result.push({ title: t.busStops, icon: Bus, color: '#94a3b8', data: busItems });
     return result;
-  }, [metroItems, brtItems, busItems, t, isVisible]);
+  }, [metroItems, brtItems, busItems, t, isSheetVisible]);
 
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
@@ -872,7 +872,8 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
 
-  const showStationList = !selected && !isSearching && sections.length > 0;
+  const showStationList =
+    !selected && !isSearching && !isSheetLoading && sections.length > 0;
 
   return (
     <>
@@ -912,7 +913,7 @@ const SheetSectionInner = () => {
             sheetRef={sheetRef}
             onBackToList={handleBackToList}
           />
-        ) : isSearching ? (
+        ) : isSearching || isSheetLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="small" color={GRAY} />
           </View>

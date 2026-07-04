@@ -13,7 +13,7 @@ import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { Bus, TrainFrontIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
+import { StyleSheet, Text, TurboModuleRegistry, View, ActivityIndicator } from 'react-native';
 
 const isTrueSheetLinked = !!TurboModuleRegistry.get('TrueSheetModule');
 const SheetSection = isTrueSheetLinked ? require('@/components/sheet-section').SheetSection : null;
@@ -391,13 +391,21 @@ function MapControlsOverlay() {
 
 function MapWithStations() {
   const { city } = useCity();
+  const { isMapLoading } = useMapLayers();
   if (!mapComponents) return null;
   const { Map } = mapComponents;
 
   return (
-    <Map zoom={city.zoom} center={city.center} controls={<MapControlsOverlay />}>
-      <MapContent />
-    </Map>
+    <View style={styles.mapHost}>
+      <Map zoom={city.zoom} center={city.center} controls={<MapControlsOverlay />}>
+        <MapContent />
+      </Map>
+      {isMapLoading ? (
+        <View style={styles.mapLoadingOverlay} pointerEvents="none">
+          <ActivityIndicator size="small" color="#ffffff" />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -429,6 +437,19 @@ export default function Screen() {
 }
 
 const styles = StyleSheet.create({
+  mapHost: {
+    flex: 1,
+  },
+  mapLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
+  },
   mapFallback: {
     flex: 1,
     alignItems: 'center',
