@@ -111,6 +111,16 @@ const headerStyles = StyleSheet.create({
     gap: 8,
   },
   inputWrapRTL: { flexDirection: 'row-reverse' },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    height: INPUT_HEIGHT,
+    color: 'white',
+    padding: 0,
+  },
+  rtlInput: {
+    writingDirection: 'rtl',
+  } as TextStyle,
 });
 
 // ─── Pill button ──────────────────────────────────────────────────────────────
@@ -710,14 +720,4 @@ const styles = StyleSheet.create({
   inputWrapRTL: {
     flexDirection: 'row-reverse',
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    height: INPUT_HEIGHT,
-    color: 'white',
-    padding: 0,
-  },
-  rtlInput: {
-    writingDirection: 'rtl',
-  } as TextStyle,
 });
