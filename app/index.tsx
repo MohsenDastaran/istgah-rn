@@ -1,5 +1,6 @@
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
+import { TEHRAN_BRT_LINES_GEOJSON } from '@/lib/brt-lines';
 import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON, type Station } from '@/lib/stations';
 import { SettingsPanel } from '@/components/settings-panel';
 import { Stack } from 'expo-router';
@@ -15,6 +16,7 @@ const isMapLibreLinked = !!TurboModuleRegistry.get('MLRNCameraModule');
 const mapComponents = isMapLibreLinked ? require('@/components/map') : null;
 
 const METRO_LINES_LAYER_ID = 'metro-lines';
+const BRT_LINES_LAYER_ID = 'brt-lines';
 const STATIONS_LAYER_ID = 'stations-circles';
 
 // ─── Map layers (memoized — avoids re-rendering 140+ native markers on tap) ─────
@@ -111,6 +113,21 @@ const MapLayers = React.memo(function MapLayers({
             lineColor: ['get', 'color'],
             lineWidth: 3,
             lineOpacity: 0.85,
+            lineJoin: 'round',
+            lineCap: 'round',
+          }}
+        />
+      </GeoJSONSource>
+
+      <GeoJSONSource id="brt-lines" data={TEHRAN_BRT_LINES_GEOJSON}>
+        <Layer
+          id={BRT_LINES_LAYER_ID}
+          type="line"
+          beforeId={STATIONS_LAYER_ID}
+          style={{
+            lineColor: ['get', 'color'],
+            lineWidth: 5,
+            lineOpacity: 0.9,
             lineJoin: 'round',
             lineCap: 'round',
           }}
