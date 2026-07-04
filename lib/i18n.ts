@@ -62,9 +62,9 @@ const translations = {
     themeDark: 'Dark',
     reportIssue: 'Report an Issue',
     reportIssueDescription:
-      'Found a bug or want to suggest a new feature? You can open an issue directly on GitHub.',
+      'Found a bug, a missing station or stop, or want to suggest a feature? You can report it directly on GitHub.',
     reportIssueBody:
-      'Please describe the problem in as much detail as possible — including what you expected to happen, what actually happened, and the steps to reproduce it.',
+      'Please describe the issue in as much detail as you can. If a station or bus stop is missing from the map, include its name, city, and approximate location. For bugs, say what you expected, what happened, and how to reproduce it.',
     cancel: 'Cancel',
     openGitHubIssues: 'Open GitHub Issues',
     about: 'About',
@@ -142,9 +142,9 @@ const translations = {
     themeDark: 'تیره',
     reportIssue: 'گزارش مشکل',
     reportIssueDescription:
-      'باگ پیدا کردید یا پیشنهادی دارید؟ می‌توانید مستقیماً در گیت‌هاب issue باز کنید.',
+      'باگ دیدید، ایستگاه یا ایستگاه اتوبوسی روی نقشه نیست، یا پیشنهادی دارید؟ می‌توانید مستقیماً در گیت‌هاب گزارش دهید.',
     reportIssueBody:
-      'لطفاً مشکل را با جزئیات کامل توضیح دهید — شامل آنچه انتظار داشتید، آنچه رخ داد و مراحل بازتولید مشکل.',
+      'لطفاً با جزئیات بنویسید. اگر ایستگاه یا ایستگاه اتوبوسی روی نقشه نیست، نام، شهر و در صورت امکان محل تقریبی را ذکر کنید. برای باگ، بگویید چه انتظاری داشتید، چه اتفاقی افتاد و چگونه تکرار می‌شود.',
     cancel: 'لغو',
     openGitHubIssues: 'باز کردن Issues در گیت‌هاب',
     about: 'درباره',
