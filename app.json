@@ -4,7 +4,7 @@
     "slug": "istgah",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/istgah-logo.png",
     "scheme": "istgah",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
@@ -14,7 +14,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/istgah-logo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.mohsendastaran.istgah",
@@ -30,7 +30,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
+          "image": "./assets/images/istgah-logo.png",
+          "imageWidth": 300,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
