@@ -31,12 +31,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TextStyle,
-  TouchableOpacity,
   View,
   useWindowDimensions,
   type PressableProps,
   type SectionListData,
+  type TextStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -471,8 +470,6 @@ type Section = SectionListData<ListItem, { title: string; icon: LucideIcon; colo
 
 const DEBOUNCE_MS = 300;
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
 // ─── Inner ────────────────────────────────────────────────────────────────────
 const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
@@ -613,18 +610,6 @@ const SheetSectionInner = () => {
 
   return (
     <>
-      <Animated.View pointerEvents={currentDetent === 1 ? 'auto' : 'none'} style={floatingStyle}>
-        <AnimatedTouchable
-          activeOpacity={0.6}
-          disabled={currentDetent !== 1}
-          style={styles.floatingBtn}
-          onPress={handleSheetClose}>
-          <View style={styles.floatingBtnContent}>
-            <XIcon size={20} color="white" />
-          </View>
-        </AnimatedTouchable>
-      </Animated.View>
-
       <ReanimatedTrueSheet
         name="main"
         ref={sheetRef}
@@ -677,6 +662,23 @@ const SheetSectionInner = () => {
           />
         )}
       </ReanimatedTrueSheet>
+
+      <Animated.View
+        pointerEvents={currentDetent === 1 ? 'box-none' : 'none'}
+        style={[styles.floatingBtnHost, floatingStyle]}
+        collapsable={false}>
+        <Pressable
+          disabled={currentDetent !== 1}
+          style={({ pressed }) => [styles.floatingBtn, pressed && styles.floatingBtnPressed]}
+          onPress={handleSheetClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close sheet"
+          hitSlop={8}>
+          <View style={styles.floatingBtnContent}>
+            <XIcon size={20} color="white" />
+          </View>
+        </Pressable>
+      </Animated.View>
     </>
   );
 };
@@ -694,6 +696,11 @@ export function SheetSection() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  floatingBtnHost: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 10,
+    elevation: 10,
+  },
   floatingBtn: {
     position: 'absolute',
     right: SPACING,
@@ -704,8 +711,9 @@ const styles = StyleSheet.create({
     backgroundColor: Platform.select({ ios: 'rgba(0, 0, 0, 0.3)', default: DARK }),
     borderColor: 'rgba(255, 255, 255, 0.3)',
     borderWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 0 }),
-    elevation: 4,
+    elevation: 8,
   },
+  floatingBtnPressed: { opacity: 0.6 },
   floatingBtnContent: {
     width: '100%',
     height: '100%',
