@@ -21,13 +21,16 @@ import {
   type Option,
 } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
+import { CITIES, useCity, CITY_IDS } from '@/lib/city-context';
 import { useI18n, type Lang } from '@/lib/i18n';
+import type { CityId } from '@/lib/cities';
 import {
   CircleAlert,
   Code,
   ExternalLink,
   Globe,
   Info,
+  MapPin,
   Palette,
   Settings,
   User2,
@@ -191,7 +194,8 @@ function AboutDialog() {
 
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 export function SettingsPanel() {
-  const { lang, setLang } = useI18n();
+  const { t, lang, setLang, isRTL } = useI18n();
+  const { cityId, setCity } = useCity();
   const { theme } = useUniwind();
   const insets = useSafeAreaInsets();
 
@@ -212,8 +216,14 @@ export function SettingsPanel() {
     { value: 'dark', label: 'Dark' },
   ];
 
+  const cityOptions: Option[] = CITY_IDS.map((id) => ({
+    value: id,
+    label: isRTL ? CITIES[id].name.fa : CITIES[id].name.en,
+  }));
+
   const selectedLang = langOptions.find((o) => o.value === lang);
   const selectedTheme = themeOptions.find((o) => o.value === (theme ?? 'light'));
+  const selectedCity = cityOptions.find((o) => o.value === cityId);
 
   return (
     <Popover>
@@ -261,6 +271,26 @@ export function SettingsPanel() {
               <SelectContent insets={contentInsets} className="w-32">
                 <SelectGroup>
                   {themeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} label={opt.label}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </SettingsRow>
+
+          {/* Default city */}
+          <SettingsRow icon={MapPin} label={t.defaultCity}>
+            <Select
+              value={selectedCity}
+              onValueChange={(opt) => opt && setCity(opt.value as CityId)}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder={t.defaultCity} />
+              </SelectTrigger>
+              <SelectContent insets={contentInsets} className="w-36">
+                <SelectGroup>
+                  {cityOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value} label={opt.label}>
                       {opt.label}
                     </SelectItem>

@@ -27,6 +27,7 @@ const translations = {
     clearRoute: 'Clear Route',
     backToList: 'Back to List',
     openInMaps: 'Open in Maps',
+    defaultCity: 'Default city',
   },
   fa: {
     appName: 'ایستگاه',
@@ -44,6 +45,7 @@ const translations = {
     clearRoute: 'حذف مسیر',
     backToList: 'بازگشت به لیست',
     openInMaps: 'باز کردن در نقشه',
+    defaultCity: 'شهر پیش‌فرض',
   },
 } as const;
 

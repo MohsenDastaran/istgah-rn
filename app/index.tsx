@@ -1,3 +1,4 @@
+import { useCity } from '@/lib/city-context';
 import { useI18n } from '@/lib/i18n';
 import { useStations } from '@/lib/stations-context';
 import { TEHRAN_BRT_LINES_GEOJSON } from '@/lib/brt-lines';
@@ -159,6 +160,7 @@ const MapLayers = React.memo(function MapLayers({
 function MapContent() {
   const { selectedStation, route, selectStation, setUserLocation, pendingFlyTo, clearPendingFlyTo } =
     useStations();
+  const { city, cityId } = useCity();
   // Safe: MapContent is only ever rendered inside <Map>, which provides MapContext.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { cameraRef } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
@@ -181,6 +183,15 @@ function MapContent() {
       setUserLocation([position.coords.longitude, position.coords.latitude]);
     }
   }, [position, setUserLocation]);
+
+  React.useEffect(() => {
+    if (!cameraRef.current) return;
+    cameraRef.current.flyTo({
+      center: city.center,
+      zoom: city.zoom,
+      duration: 1500,
+    });
+  }, [cityId, city.center, city.zoom, cameraRef]);
 
   React.useEffect(() => {
     if (!pendingFlyTo || !cameraRef.current) return;
@@ -237,11 +248,12 @@ function MapContent() {
 }
 
 function MapWithStations() {
+  const { city } = useCity();
   if (!mapComponents) return null;
   const { Map } = mapComponents;
 
   return (
-    <Map zoom={12} center={[51.39, 35.72]}>
+    <Map zoom={city.zoom} center={city.center}>
       <MapContent />
     </Map>
   );
