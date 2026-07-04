@@ -203,20 +203,11 @@ const DetailToolbar = React.memo(function DetailToolbar({
         <Text className="text-xs text-[#b2bac8]">{t.backToList}</Text>
       </Pressable>
 
-      {route ? (
-        <View className="overflow-hidden rounded-xl bg-white/5">
-          <Pressable
-            onPress={onClearRoute}
-            accessibilityRole="button"
-            accessibilityLabel={t.clearRoute}
-            className="min-h-[44px] flex-row items-center justify-center gap-1.5 px-3 py-2.5 active:bg-white/10">
-            <Icon as={RouteOff} className="size-4" />
-            <Text className="text-xs font-semibold text-white">{t.clearRoute}</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View className="overflow-hidden rounded-xl bg-white/5">
-          <View className="flex-row items-stretch">
+      <View className="overflow-hidden rounded-xl bg-white/5">
+        <View className="flex-row items-stretch">
+          {route ? (
+            <ToolbarTile icon={RouteOff} label={t.clearRoute} onPress={onClearRoute} />
+          ) : (
             <ToolbarTile
               icon={Car}
               label={t.driveThere}
@@ -225,11 +216,11 @@ const DetailToolbar = React.memo(function DetailToolbar({
               onPress={onPrimaryPress}
               accessibilityLabel={`${t.driveThere}, ${t.drivingOnly}`}
             />
-            <ToolbarDivider />
-            <ToolbarTile icon={ExternalLink} label={t.openInMaps} onPress={onOpenMaps} />
-          </View>
+          )}
+          <ToolbarDivider />
+          <ToolbarTile icon={ExternalLink} label={t.openInMaps} onPress={onOpenMaps} />
         </View>
-      )}
+      </View>
     </View>
   );
 });
