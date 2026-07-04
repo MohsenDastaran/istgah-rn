@@ -3,6 +3,7 @@ import '@/global.css';
 import { NAV_THEME } from '@/lib/theme';
 import { CityProvider } from '@/lib/city-context';
 import { I18nProvider } from '@/lib/i18n';
+import { MapLayersProvider } from '@/lib/map-layers-context';
 import { StationsProvider } from '@/lib/stations-context';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import { PortalHost } from '@rn-primitives/portal';
@@ -20,13 +21,15 @@ export default function RootLayout() {
   return (
     <I18nProvider>
       <CityProvider>
-        <StationsProvider>
-          <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-            <StatusBar style="light" />
-            <Stack />
-            <PortalHost />
-          </ThemeProvider>
-        </StationsProvider>
+        <MapLayersProvider>
+          <StationsProvider>
+            <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+              <StatusBar style="light" />
+              <Stack />
+              <PortalHost />
+            </ThemeProvider>
+          </StationsProvider>
+        </MapLayersProvider>
       </CityProvider>
     </I18nProvider>
   );

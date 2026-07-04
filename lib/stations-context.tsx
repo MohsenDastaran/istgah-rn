@@ -1,9 +1,30 @@
 import * as React from 'react';
+import type { BusStop } from './bus-stops';
 import { STATIONS, type Station } from './stations';
+
+export type MapSelection =
+  | { kind: 'metro'; station: Station }
+  | { kind: 'brt'; stop: BusStop }
+  | { kind: 'bus'; stop: BusStop };
+
+function selectionCoordinates(sel: MapSelection): [number, number] {
+  return sel.kind === 'metro' ? sel.station.coordinates : sel.stop.coordinate;
+}
+
+function selectionLabel(sel: MapSelection, isRTL: boolean): string {
+  if (sel.kind === 'metro') {
+    return isRTL ? sel.station.name.fa : sel.station.name.en;
+  }
+  if (isRTL || !sel.stop.latinName) return sel.stop.name;
+  return sel.stop.latinName;
+}
 
 type StationsContextValue = {
   stations: Station[];
   filteredStations: Station[];
+  /** Unified map/sheet selection (metro, BRT, or bus). */
+  selected: MapSelection | null;
+  /** Convenience alias — non-null only when a metro station is selected. */
   selectedStation: Station | null;
   searchQuery: string;
   route: [number, number][] | null;
@@ -12,18 +33,21 @@ type StationsContextValue = {
   routeLoading: boolean;
   userLocation: [number, number] | null;
   setSearchQuery: (q: string) => void;
+  selectItem: (item: MapSelection | null, options?: { flyTo?: boolean }) => void;
+  /** @deprecated Use selectItem — kept for backward compatibility. */
   selectStation: (station: Station | null, options?: { flyTo?: boolean }) => void;
   pendingFlyTo: [number, number] | null;
   clearPendingFlyTo: () => void;
   setUserLocation: (coords: [number, number] | null) => void;
   fetchRoute: () => Promise<void>;
   clearRoute: () => void;
+  getSelectionLabel: (isRTL: boolean) => string;
 };
 
 const StationsContext = React.createContext<StationsContextValue | null>(null);
 
 export function StationsProvider({ children }: { children: React.ReactNode }) {
-  const [selectedStation, setSelectedStation] = React.useState<Station | null>(null);
+  const [selected, setSelected] = React.useState<MapSelection | null>(null);
   const [searchQuery, setSearchQueryState] = React.useState('');
   const [route, setRoute] = React.useState<[number, number][] | null>(null);
   const [routeDistance, setRouteDistance] = React.useState<number | null>(null);
@@ -44,19 +68,26 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
     setSearchQueryState(q);
   }, []);
 
-  const selectStation = React.useCallback(
-    (station: Station | null, options?: { flyTo?: boolean }) => {
-      setSelectedStation(station);
-      if (options?.flyTo && station) {
-        setPendingFlyTo(station.coordinates);
+  const selectItem = React.useCallback(
+    (item: MapSelection | null, options?: { flyTo?: boolean }) => {
+      setSelected(item);
+      if (options?.flyTo && item) {
+        setPendingFlyTo(selectionCoordinates(item));
       }
-      if (!station) {
+      if (!item) {
         setRoute(null);
         setRouteDistance(null);
         setRouteDuration(null);
       }
     },
     []
+  );
+
+  const selectStation = React.useCallback(
+    (station: Station | null, options?: { flyTo?: boolean }) => {
+      selectItem(station ? { kind: 'metro', station } : null, options);
+    },
+    [selectItem]
   );
 
   const clearPendingFlyTo = React.useCallback(() => {
@@ -70,12 +101,12 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchRoute = React.useCallback(async () => {
-    if (!userLocation || !selectedStation) return;
+    if (!userLocation || !selected) return;
 
     setRouteLoading(true);
     try {
       const [fromLng, fromLat] = userLocation;
-      const [toLng, toLat] = selectedStation.coordinates;
+      const [toLng, toLat] = selectionCoordinates(selected);
       const url =
         `https://router.project-osrm.org/route/v1/driving/` +
         `${fromLng},${fromLat};${toLng},${toLat}` +
@@ -97,12 +128,20 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setRouteLoading(false);
     }
-  }, [userLocation, selectedStation]);
+  }, [userLocation, selected]);
+
+  const getSelectionLabel = React.useCallback(
+    (isRTL: boolean) => (selected ? selectionLabel(selected, isRTL) : ''),
+    [selected]
+  );
+
+  const selectedStation = selected?.kind === 'metro' ? selected.station : null;
 
   const value = React.useMemo<StationsContextValue>(
     () => ({
       stations: STATIONS,
       filteredStations,
+      selected,
       selectedStation,
       searchQuery,
       route,
@@ -111,15 +150,18 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       routeLoading,
       userLocation,
       setSearchQuery,
+      selectItem,
       selectStation,
       pendingFlyTo,
       clearPendingFlyTo,
       setUserLocation,
       fetchRoute,
       clearRoute,
+      getSelectionLabel,
     }),
     [
       filteredStations,
+      selected,
       selectedStation,
       searchQuery,
       route,
@@ -128,11 +170,13 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       routeLoading,
       userLocation,
       setSearchQuery,
+      selectItem,
       selectStation,
       pendingFlyTo,
       clearPendingFlyTo,
       fetchRoute,
       clearRoute,
+      getSelectionLabel,
     ]
   );
 

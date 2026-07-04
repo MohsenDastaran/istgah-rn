@@ -9,6 +9,8 @@ export type BusStop = {
   lines: string;
   isBRT: boolean;
   brtLine: string;
+  direction: string;
+  stationCode: string;
 };
 
 function isBRTStop(brt: unknown): boolean {
@@ -17,10 +19,12 @@ function isBRTStop(brt: unknown): boolean {
   return s.startsWith('BRT') || s.startsWith('brt');
 }
 
-export const BUS_STOPS: BusStop[] = (rawBusStops.features as Array<{
-  geometry: { type: string; coordinates: number[] };
-  properties: Record<string, unknown>;
-}>)
+export const BUS_STOPS: BusStop[] = (
+  rawBusStops.features as Array<{
+    geometry: { type: string; coordinates: number[] };
+    properties: Record<string, unknown>;
+  }>
+)
   .filter((f) => f.geometry.type === 'Point' && f.properties['XGEO'] && f.properties['YGEO'])
   .map((f) => {
     const p = f.properties;
@@ -34,11 +38,59 @@ export const BUS_STOPS: BusStop[] = (rawBusStops.features as Array<{
       lines: String(p['LINESTATIO'] ?? ''),
       isBRT: isBRTStop(brt),
       brtLine: brt && isBRTStop(brt) ? brt : '',
+      direction: String(p['DIRECTION'] ?? ''),
+      stationCode: String(p['STATIONCOD'] ?? ''),
     };
   });
 
 export const BRT_BUS_STOPS = BUS_STOPS.filter((s) => s.isBRT);
 export const REGULAR_BUS_STOPS = BUS_STOPS.filter((s) => !s.isBRT);
+
+// O(1) lookup by id — used when a map circle is tapped to resolve the full object.
+const BUS_STOPS_BY_ID = new Map(BUS_STOPS.map((s) => [s.id, s]));
+
+export function getBusStopById(id: string): BusStop | undefined {
+  return BUS_STOPS_BY_ID.get(id);
+}
+
+type BusStopFeature = {
+  type: 'Feature';
+  properties: {
+    id: string;
+    name: string;
+    latinName: string;
+    address: string;
+    lines: string;
+    brtLine: string;
+    kind: 'brt' | 'bus';
+  };
+  geometry: { type: 'Point'; coordinates: [number, number] };
+};
+
+function toGeoJSON(stops: BusStop[], kind: 'brt' | 'bus') {
+  return {
+    type: 'FeatureCollection' as const,
+    features: stops.map(
+      (s): BusStopFeature => ({
+        type: 'Feature',
+        properties: {
+          id: s.id,
+          name: s.name,
+          latinName: s.latinName,
+          address: s.address,
+          lines: s.lines,
+          brtLine: s.brtLine,
+          kind,
+        },
+        geometry: { type: 'Point', coordinates: s.coordinate },
+      })
+    ),
+  };
+}
+
+/** Pre-computed GeoJSON — built once at module load, never per render. */
+export const BRT_STOPS_GEOJSON = toGeoJSON(BRT_BUS_STOPS, 'brt');
+export const REGULAR_BUS_STOPS_GEOJSON = toGeoJSON(REGULAR_BUS_STOPS, 'bus');
 
 const MAX_RESULTS = 8;
 

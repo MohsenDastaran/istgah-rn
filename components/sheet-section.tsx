@@ -6,6 +6,7 @@ import {
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
 import { useI18n } from '@/lib/i18n';
+import { useMapLayers } from '@/lib/map-layers-context';
 import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
@@ -458,6 +459,159 @@ const detailStyles = StyleSheet.create({
   textWrapRTL: { alignItems: 'flex-end' },
   name: { color: '#fff', fontSize: 18, fontWeight: '600' },
   line: { color: GRAY, fontSize: 13, marginTop: 2 },
+  dotMedium: { width: 14, height: 14, borderRadius: 7, flexShrink: 0 },
+  dotSmall: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  infoBlock: { gap: 6, marginBottom: SPACING / 2 },
+  infoRow: { gap: 2 },
+  infoLabel: { color: GRAY, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 },
+  infoValue: { color: '#fff', fontSize: 13, lineHeight: 18 },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(249,115,22,0.2)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: { color: '#fb923c', fontSize: 11, fontWeight: '600' },
+});
+
+const InfoRow = React.memo(function InfoRow({
+  label,
+  value,
+  isRTL,
+}: {
+  label: string;
+  value: string;
+  isRTL: boolean;
+}) {
+  if (!value.trim()) return null;
+  return (
+    <View style={[detailStyles.infoRow, isRTL && detailStyles.textWrapRTL]}>
+      <Text style={detailStyles.infoLabel}>{label}</Text>
+      <Text style={detailStyles.infoValue}>{value}</Text>
+    </View>
+  );
+});
+
+// ─── Bus stop detail ──────────────────────────────────────────────────────────
+const BusStopDetail = React.memo(function BusStopDetail({
+  stop,
+  isBRT,
+  isRTL,
+  sheetRef,
+}: {
+  stop: BusStop;
+  isBRT: boolean;
+  isRTL: boolean;
+  sheetRef: React.RefObject<TrueSheet | null>;
+}) {
+  const { t } = useI18n();
+  const {
+    route,
+    routeDistance,
+    routeDuration,
+    routeLoading,
+    userLocation,
+    fetchRoute,
+    clearRoute,
+    selectItem,
+  } = useStations();
+
+  const displayName =
+    isRTL || !stop.latinName ? stop.name : stop.latinName;
+  const dotColor = isBRT ? '#f97316' : '#64748b';
+  const dotStyle = isBRT ? detailStyles.dotMedium : detailStyles.dotSmall;
+
+  const handleDirections = async () => {
+    await fetchRoute();
+    sheetRef.current?.resize(1);
+  };
+
+  const handleOpenMaps = () => {
+    const [lng, lat] = stop.coordinate;
+    openMapsDirections(lat, lng, displayName);
+  };
+
+  const handleClose = () => {
+    clearRoute();
+    selectItem(null);
+    sheetRef.current?.resize(0);
+  };
+
+  return (
+    <View style={{ gap: GAP }}>
+      <View style={[detailStyles.header, isRTL && detailStyles.headerRTL]}>
+        <View style={[dotStyle, { backgroundColor: dotColor }]} />
+        <View style={[detailStyles.textWrap, isRTL && detailStyles.textWrapRTL]}>
+          <Text style={detailStyles.name}>{displayName}</Text>
+          <Text style={detailStyles.line}>
+            {isBRT ? t.brtStops : t.busStops}
+          </Text>
+        </View>
+      </View>
+
+      <View style={detailStyles.infoBlock}>
+        {isBRT && stop.brtLine ? (
+          <View style={[detailStyles.badge, isRTL && { alignSelf: 'flex-end' }]}>
+            <Text style={detailStyles.badgeText}>{stop.brtLine}</Text>
+          </View>
+        ) : null}
+        <InfoRow label={t.busLines} value={stop.lines} isRTL={isRTL} />
+        <InfoRow label={t.direction} value={stop.direction} isRTL={isRTL} />
+        <InfoRow label={t.stationCode} value={stop.stationCode} isRTL={isRTL} />
+        <InfoRow label={t.address} value={stop.address} isRTL={isRTL} />
+      </View>
+
+      {route && routeDistance != null && routeDuration != null && (
+        <RouteInfoBar
+          distance={routeDistance}
+          duration={routeDuration}
+          distanceLabel={t.distance}
+          durationLabel={t.duration}
+          isRTL={isRTL}
+        />
+      )}
+
+      {!route && (
+        <>
+          <SheetButton
+            text={t.getDirections}
+            icon={Navigation2}
+            isRTL={isRTL}
+            loading={routeLoading}
+            disabled={!userLocation || routeLoading}
+            onPress={handleDirections}
+            hint={!userLocation ? t.locateYourselfFirst : undefined}
+          />
+          <SheetButton
+            text={t.openInMaps}
+            icon={ExternalLink}
+            isRTL={isRTL}
+            variant="secondary"
+            onPress={handleOpenMaps}
+          />
+        </>
+      )}
+
+      {route && (
+        <SheetButton
+          text={t.clearRoute}
+          icon={RouteOff}
+          isRTL={isRTL}
+          variant="secondary"
+          onPress={clearRoute}
+        />
+      )}
+
+      <SheetButton
+        text={t.backToList}
+        icon={isRTL ? ArrowRight : ArrowLeft}
+        isRTL={isRTL}
+        variant="secondary"
+        onPress={handleClose}
+      />
+    </View>
+  );
 });
 
 // ─── Search results (categorised) ────────────────────────────────────────────
@@ -477,8 +631,8 @@ const SheetSectionInner = () => {
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
   const { t, isRTL } = useI18n();
-  const { filteredStations, selectedStation, selectStation, searchQuery, setSearchQuery } =
-    useStations();
+  const { isVisible } = useMapLayers();
+  const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
 
   // ── Debounced query ──────────────────────────────────────────────────────────
   const [debouncedQuery, setDebouncedQuery] = React.useState('');
@@ -529,23 +683,23 @@ const SheetSectionInner = () => {
 
   const sections = React.useMemo((): Section[] => {
     const result: Section[] = [];
-    if (metroItems.length > 0)
+    if (isVisible('metro') && metroItems.length > 0)
       result.push({ title: t.metroStations, icon: TrainFront, color: '#60a5fa', data: metroItems });
-    if (brtItems.length > 0)
+    if (isVisible('brt') && brtItems.length > 0)
       result.push({ title: t.brtStops, icon: Bus, color: '#fb923c', data: brtItems });
-    if (busItems.length > 0)
+    if (isVisible('bus') && busItems.length > 0)
       result.push({ title: t.busStops, icon: Bus, color: '#94a3b8', data: busItems });
     return result;
-  }, [metroItems, brtItems, busItems, t]);
+  }, [metroItems, brtItems, busItems, t, isVisible]);
 
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
   React.useEffect(() => {
-    if (selectedStation && currentDetent === 0) {
+    if (selected && currentDetent === 0) {
       sheetRef.current?.resize(1);
     }
-  }, [selectedStation, currentDetent]);
+  }, [selected, currentDetent]);
 
   // ── Floating close button ────────────────────────────────────────────────────
   const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
@@ -562,14 +716,19 @@ const SheetSectionInner = () => {
   });
 
   const handleStationPress = React.useCallback(
-    (station: Station) => selectStation(station, { flyTo: true }),
-    [selectStation]
+    (station: Station) => selectItem({ kind: 'metro', station }, { flyTo: true }),
+    [selectItem]
+  );
+
+  const handleBusStopPress = React.useCallback(
+    (stop: BusStop, kind: 'brt' | 'bus') => selectItem({ kind, stop }, { flyTo: true }),
+    [selectItem]
   );
 
   const handleSheetClose = React.useCallback(() => {
-    selectStation(null);
+    selectItem(null);
     sheetRef.current?.resize(0);
-  }, [selectStation]);
+  }, [selectItem]);
 
   // ── Renderers ────────────────────────────────────────────────────────────────
   const renderSectionHeader = React.useCallback(
@@ -591,11 +750,17 @@ const SheetSectionInner = () => {
         );
       }
       if (item.kind === 'brt' || item.kind === 'bus') {
-        return <BusRow stop={item.stop} isRTL={isRTL} onPress={() => {}} />;
+        return (
+          <BusRow
+            stop={item.stop}
+            isRTL={isRTL}
+            onPress={() => handleBusStopPress(item.stop, item.kind)}
+          />
+        );
       }
       return null;
     },
-    [isRTL, handleStationPress]
+    [isRTL, handleStationPress, handleBusStopPress]
   );
 
   const keyExtractor = React.useCallback(
@@ -606,7 +771,7 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
 
-  const showStationList = !selectedStation && !isSearching && !(sections.length === 0 && hasQuery);
+  const showStationList = !selected && !isSearching && !(sections.length === 0 && hasQuery);
 
   return (
     <>
@@ -631,8 +796,15 @@ const SheetSectionInner = () => {
             onChangeText={handleSearchChange}
           />
         }>
-        {selectedStation ? (
-          <StationDetail station={selectedStation} isRTL={isRTL} sheetRef={sheetRef} />
+        {selected?.kind === 'metro' ? (
+          <StationDetail station={selected.station} isRTL={isRTL} sheetRef={sheetRef} />
+        ) : selected?.kind === 'brt' || selected?.kind === 'bus' ? (
+          <BusStopDetail
+            stop={selected.stop}
+            isBRT={selected.kind === 'brt'}
+            isRTL={isRTL}
+            sheetRef={sheetRef}
+          />
         ) : isSearching ? (
           <View style={styles.centered}>
             <ActivityIndicator size="small" color={GRAY} />

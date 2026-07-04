@@ -1,12 +1,19 @@
 import { useCity } from '@/lib/city-context';
 import { useI18n } from '@/lib/i18n';
-import { useStations } from '@/lib/stations-context';
+import { useMapLayers } from '@/lib/map-layers-context';
+import { useStations, type MapSelection } from '@/lib/stations-context';
 import { TEHRAN_BRT_LINES_GEOJSON } from '@/lib/brt-lines';
-import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON, type Station } from '@/lib/stations';
+import {
+  BRT_STOPS_GEOJSON,
+  REGULAR_BUS_STOPS_GEOJSON,
+  getBusStopById,
+} from '@/lib/bus-stops';
+import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON } from '@/lib/stations';
 import { SettingsPanel } from '@/components/settings-panel';
+import { StationLayerToggle } from '@/components/station-layer-toggle';
 import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
-import { TrainFrontIcon } from 'lucide-react-native';
+import { Bus, TrainFrontIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
 
@@ -18,13 +25,22 @@ const mapComponents = isMapLibreLinked ? require('@/components/map') : null;
 
 const METRO_LINES_LAYER_ID = 'metro-lines';
 const BRT_LINES_LAYER_ID = 'brt-lines';
-const STATIONS_LAYER_ID = 'stations-circles';
+const METRO_STATIONS_LAYER_ID = 'metro-stations';
+const BRT_STOPS_LAYER_ID = 'brt-stops';
+const BUS_STOPS_LAYER_ID = 'bus-stops';
 
-// ─── Map layers (memoized — avoids re-rendering 140+ native markers on tap) ─────
+function layerVisibility(visible: boolean) {
+  return { visibility: visible ? ('visible' as const) : ('none' as const) };
+}
+
+// ─── Map layers (memoized — GPU circle layers, no native markers for bulk stops) ─
 type MapLayersProps = {
-  selectedStation: Station | null;
+  selected: MapSelection | null;
   route: [number, number][] | null;
-  selectStation: (station: Station) => void;
+  showMetro: boolean;
+  showBrt: boolean;
+  showBus: boolean;
+  selectItem: ReturnType<typeof useStations>['selectItem'];
   MapMarker: React.ComponentType<{
     coordinate: [number, number];
     children?: React.ReactNode;
@@ -46,70 +62,145 @@ type MapLayersProps = {
     id: string;
     type: string;
     style?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
     beforeId?: string;
     afterId?: string;
   }>;
 };
 
 const MapLayers = React.memo(function MapLayers({
-  selectedStation,
+  selected,
   route,
-  selectStation,
+  showMetro,
+  showBrt,
+  showBus,
+  selectItem,
   MapMarker,
   MapRoute,
   GeoJSONSource,
   Layer,
 }: MapLayersProps) {
-  const handleStationPress = React.useCallback(
+  const selectedMetroId = selected?.kind === 'metro' ? selected.station.id : null;
+  const selectedBrtId = selected?.kind === 'brt' ? selected.stop.id : null;
+  const selectedBusId = selected?.kind === 'bus' ? selected.stop.id : null;
+
+  const handleMetroPress = React.useCallback(
     (event: { nativeEvent: { features?: GeoJSON.Feature[] } }) => {
       const id = event.nativeEvent.features?.[0]?.properties?.id;
       if (typeof id !== 'string') return;
       const station = STATIONS.find((s) => s.id === id);
-      if (station) selectStation(station);
+      if (station) selectItem({ kind: 'metro', station }, { flyTo: true });
     },
-    [selectStation]
+    [selectItem]
   );
 
-  const stationCircleStyle = React.useMemo(
+  const handleBrtPress = React.useCallback(
+    (event: { nativeEvent: { features?: GeoJSON.Feature[] } }) => {
+      const id = event.nativeEvent.features?.[0]?.properties?.id;
+      if (typeof id !== 'string') return;
+      const stop = getBusStopById(id);
+      if (stop?.isBRT) selectItem({ kind: 'brt', stop }, { flyTo: true });
+    },
+    [selectItem]
+  );
+
+  const handleBusPress = React.useCallback(
+    (event: { nativeEvent: { features?: GeoJSON.Feature[] } }) => {
+      const id = event.nativeEvent.features?.[0]?.properties?.id;
+      if (typeof id !== 'string') return;
+      const stop = getBusStopById(id);
+      if (stop && !stop.isBRT) selectItem({ kind: 'bus', stop }, { flyTo: true });
+    },
+    [selectItem]
+  );
+
+  const metroCircleStyle = React.useMemo(
     () => ({
-      // Inactive stations use grey; active stations use their primary line colour.
       circleColor: ['case', ['==', ['get', 'isActive'], false], '#888888', ['get', 'lineColor']],
-      // Interchange stations: secondary line colour as stroke.
-      // Single-line stations: plain white stroke.
       circleStrokeColor: [
         'case',
         ['boolean', ['get', 'isInterchange'], false],
         ['get', 'lineColor2'],
         '#ffffff',
       ],
-      // Interchange stations get a thicker stroke so the second colour is clearly visible.
       circleStrokeWidth: ['case', ['boolean', ['get', 'isInterchange'], false], 5, 2],
-      // Hide the circle for the currently selected station (native pin takes over).
-      circleRadius: selectedStation
-        ? ['case', ['==', ['get', 'id'], selectedStation.id], 0, 10]
+      circleRadius: selectedMetroId
+        ? ['case', ['==', ['get', 'id'], selectedMetroId], 0, 10]
         : 10,
       circleOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
       circleStrokeOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
     }),
-    [selectedStation]
+    [selectedMetroId]
+  );
+
+  const brtCircleStyle = React.useMemo(
+    () => ({
+      circleColor: '#f97316',
+      circleStrokeColor: '#ffffff',
+      circleStrokeWidth: 1.5,
+      circleRadius: selectedBrtId
+        ? ['case', ['==', ['get', 'id'], selectedBrtId], 0, ['interpolate', ['linear'], ['zoom'], 10, 5, 14, 7, 18, 9]]
+        : ['interpolate', ['linear'], ['zoom'], 10, 5, 14, 7, 18, 9],
+      circleOpacity: ['interpolate', ['linear'], ['zoom'], 10, 0.45, 14, 0.85],
+    }),
+    [selectedBrtId]
+  );
+
+  const busCircleStyle = React.useMemo(
+    () => ({
+      circleColor: '#64748b',
+      circleStrokeColor: '#ffffff',
+      circleStrokeWidth: 1,
+      circleRadius: selectedBusId
+        ? ['case', ['==', ['get', 'id'], selectedBusId], 0, ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 18, 5]]
+        : ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 18, 5],
+      circleOpacity: ['interpolate', ['linear'], ['zoom'], 10, 0.35, 14, 0.75],
+    }),
+    [selectedBusId]
   );
 
   return (
     <>
-      {/* Station markers — registered first so line layers can sit beneath them */}
+      {/* Anchor layer — metro stations registered first; line/stop layers sit beneath */}
       <GeoJSONSource
-        id="stations"
+        id="metro-stations"
         data={STATIONS_GEOJSON}
-        onPress={handleStationPress}
+        onPress={handleMetroPress}
         hitbox={{ top: 24, bottom: 24, left: 24, right: 24 }}>
-        <Layer id={STATIONS_LAYER_ID} type="circle" style={stationCircleStyle} />
+        <Layer
+          id={METRO_STATIONS_LAYER_ID}
+          type="circle"
+          layout={layerVisibility(showMetro)}
+          style={metroCircleStyle}
+        />
+      </GeoJSONSource>
+
+      <GeoJSONSource id="bus-stops" data={REGULAR_BUS_STOPS_GEOJSON} onPress={handleBusPress} hitbox={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <Layer
+          id={BUS_STOPS_LAYER_ID}
+          type="circle"
+          beforeId={METRO_STATIONS_LAYER_ID}
+          layout={layerVisibility(showBus)}
+          style={busCircleStyle}
+        />
+      </GeoJSONSource>
+
+      <GeoJSONSource id="brt-stops" data={BRT_STOPS_GEOJSON} onPress={handleBrtPress} hitbox={{ top: 16, bottom: 16, left: 16, right: 16 }}>
+        <Layer
+          id={BRT_STOPS_LAYER_ID}
+          type="circle"
+          beforeId={METRO_STATIONS_LAYER_ID}
+          layout={layerVisibility(showBrt)}
+          style={brtCircleStyle}
+        />
       </GeoJSONSource>
 
       <GeoJSONSource id="metro-network" data={METRO_NETWORK_GEOJSON}>
         <Layer
           id={METRO_LINES_LAYER_ID}
           type="line"
-          beforeId={STATIONS_LAYER_ID}
+          beforeId={METRO_STATIONS_LAYER_ID}
+          layout={layerVisibility(showMetro)}
           style={{
             lineColor: ['get', 'color'],
             lineWidth: 3,
@@ -124,7 +215,8 @@ const MapLayers = React.memo(function MapLayers({
         <Layer
           id={BRT_LINES_LAYER_ID}
           type="line"
-          beforeId={STATIONS_LAYER_ID}
+          beforeId={METRO_STATIONS_LAYER_ID}
+          layout={layerVisibility(showBrt)}
           style={{
             lineColor: ['get', 'color'],
             lineWidth: 5,
@@ -136,19 +228,33 @@ const MapLayers = React.memo(function MapLayers({
       </GeoJSONSource>
 
       {route && (
-        <MapRoute coordinates={route} color="#3b82f6" width={4} beforeId={STATIONS_LAYER_ID} />
+        <MapRoute coordinates={route} color="#3b82f6" width={4} beforeId={METRO_STATIONS_LAYER_ID} />
       )}
 
-      {/* Selected-station pin sits above everything else */}
-      {selectedStation && (
-        <MapMarker coordinate={selectedStation.coordinates}>
+      {selected?.kind === 'metro' && (
+        <MapMarker coordinate={selected.station.coordinates}>
           <View
             style={[
-              markerStyles.pin,
-              { backgroundColor: selectedStation.lineColor },
-              markerStyles.pinSelected,
+              markerStyles.pinLarge,
+              { backgroundColor: selected.station.lineColor },
             ]}>
             <TrainFrontIcon size={14} color="#ffffff" strokeWidth={2.5} />
+          </View>
+        </MapMarker>
+      )}
+
+      {selected?.kind === 'brt' && (
+        <MapMarker coordinate={selected.stop.coordinate}>
+          <View style={[markerStyles.pinMedium, { backgroundColor: '#f97316' }]}>
+            <Bus size={12} color="#ffffff" strokeWidth={2.5} />
+          </View>
+        </MapMarker>
+      )}
+
+      {selected?.kind === 'bus' && (
+        <MapMarker coordinate={selected.stop.coordinate}>
+          <View style={[markerStyles.pinSmall, { backgroundColor: '#64748b' }]}>
+            <Bus size={10} color="#ffffff" strokeWidth={2.5} />
           </View>
         </MapMarker>
       )}
@@ -158,16 +264,10 @@ const MapLayers = React.memo(function MapLayers({
 
 // ─── Map content (children of <Map>) ─────────────────────────────────────────
 function MapContent() {
-  const {
-    selectedStation,
-    route,
-    selectStation,
-    setUserLocation,
-    pendingFlyTo,
-    clearPendingFlyTo,
-  } = useStations();
+  const { selected, route, selectItem, setUserLocation, pendingFlyTo, clearPendingFlyTo } =
+    useStations();
+  const { isVisible } = useMapLayers();
   const { city, cityId } = useCity();
-  // Safe: MapContent is only ever rendered inside <Map>, which provides MapContext.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { cameraRef } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
   const [hasPermission, setHasPermission] = React.useState(false);
@@ -178,8 +278,6 @@ function MapContent() {
     });
   }, []);
 
-  // Mirror live position updates (the blue dot source) into the shared context
-  // so that "Get Directions" knows where the user is without a manual locate tap.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const position = (mapComponents as NonNullable<typeof mapComponents>).useCurrentPosition({
     enabled: hasPermission,
@@ -215,9 +313,12 @@ function MapContent() {
   return (
     <>
       <MapLayers
-        selectedStation={selectedStation}
+        selected={selected}
         route={route}
-        selectStation={selectStation}
+        showMetro={isVisible('metro')}
+        showBrt={isVisible('brt')}
+        showBus={isVisible('bus')}
+        selectItem={selectItem}
         MapMarker={MapMarker}
         MapRoute={MapRoute}
         GeoJSONSource={GeoJSONSource}
@@ -283,15 +384,23 @@ function MapWithStations() {
   );
 }
 
+function ScreenHeaderTitle() {
+  const { t } = useI18n();
+  return (
+    <View style={headerStyles.titleRow}>
+      <Text style={headerStyles.titleText}>{t.headerTitle}</Text>
+      <StationLayerToggle />
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function Screen() {
-  const { t } = useI18n();
-
   return (
     <>
       <Stack.Screen
         options={{
-          title: t.headerTitle,
+          headerTitle: () => <ScreenHeaderTitle />,
           headerTransparent: true,
           headerRight: () => <SettingsPanel />,
         }}
@@ -312,6 +421,20 @@ export default function Screen() {
   );
 }
 
+const headerStyles = StyleSheet.create({
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+  },
+  titleText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+});
+
 const styles = StyleSheet.create({
   mapFallback: {
     flex: 1,
@@ -327,7 +450,7 @@ const styles = StyleSheet.create({
 });
 
 const markerStyles = StyleSheet.create({
-  pin: {
+  pinLarge: {
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -337,9 +460,24 @@ const markerStyles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 6,
   },
-  pinSelected: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  pinMedium: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+  },
+  pinSmall: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
   },
 });
