@@ -33,6 +33,29 @@ function layerVisibility(visible: boolean) {
   return { visibility: visible ? ('visible' as const) : ('none' as const) };
 }
 
+/** MapLibre requires `zoom` only in a top-level interpolate — hide selected stop inside each stop value. */
+function zoomCircleRadius(
+  selectedId: string | null,
+  z10: number,
+  z14: number,
+  z18: number,
+): unknown {
+  if (!selectedId) {
+    return ['interpolate', ['linear'], ['zoom'], 10, z10, 14, z14, 18, z18];
+  }
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    10,
+    ['case', ['==', ['get', 'id'], selectedId], 0, z10],
+    14,
+    ['case', ['==', ['get', 'id'], selectedId], 0, z14],
+    18,
+    ['case', ['==', ['get', 'id'], selectedId], 0, z18],
+  ];
+}
+
 // ─── Map layers (memoized — GPU circle layers, no native markers for bulk stops) ─
 type MapLayersProps = {
   selected: MapSelection | null;
@@ -61,7 +84,7 @@ type MapLayersProps = {
   Layer: React.ComponentType<{
     id: string;
     type: string;
-    style?: Record<string, unknown>;
+    paint?: Record<string, unknown>;
     layout?: Record<string, unknown>;
     beforeId?: string;
     afterId?: string;
@@ -114,7 +137,7 @@ const MapLayers = React.memo(function MapLayers({
     [selectItem]
   );
 
-  const metroCircleStyle = React.useMemo(
+  const metroCirclePaint = React.useMemo(
     () => ({
       circleColor: ['case', ['==', ['get', 'isActive'], false], '#888888', ['get', 'lineColor']],
       circleStrokeColor: [
@@ -133,27 +156,23 @@ const MapLayers = React.memo(function MapLayers({
     [selectedMetroId]
   );
 
-  const brtCircleStyle = React.useMemo(
+  const brtCirclePaint = React.useMemo(
     () => ({
       circleColor: '#f97316',
       circleStrokeColor: '#ffffff',
       circleStrokeWidth: 1.5,
-      circleRadius: selectedBrtId
-        ? ['case', ['==', ['get', 'id'], selectedBrtId], 0, ['interpolate', ['linear'], ['zoom'], 10, 5, 14, 7, 18, 9]]
-        : ['interpolate', ['linear'], ['zoom'], 10, 5, 14, 7, 18, 9],
+      circleRadius: zoomCircleRadius(selectedBrtId, 5, 7, 9),
       circleOpacity: ['interpolate', ['linear'], ['zoom'], 10, 0.45, 14, 0.85],
     }),
     [selectedBrtId]
   );
 
-  const busCircleStyle = React.useMemo(
+  const busCirclePaint = React.useMemo(
     () => ({
       circleColor: '#64748b',
       circleStrokeColor: '#ffffff',
       circleStrokeWidth: 1,
-      circleRadius: selectedBusId
-        ? ['case', ['==', ['get', 'id'], selectedBusId], 0, ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 18, 5]]
-        : ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 18, 5],
+      circleRadius: zoomCircleRadius(selectedBusId, 2, 4, 5),
       circleOpacity: ['interpolate', ['linear'], ['zoom'], 10, 0.35, 14, 0.75],
     }),
     [selectedBusId]
@@ -171,7 +190,7 @@ const MapLayers = React.memo(function MapLayers({
           id={METRO_STATIONS_LAYER_ID}
           type="circle"
           layout={layerVisibility(showMetro)}
-          style={metroCircleStyle}
+          paint={metroCirclePaint}
         />
       </GeoJSONSource>
 
@@ -181,7 +200,7 @@ const MapLayers = React.memo(function MapLayers({
           type="circle"
           beforeId={METRO_STATIONS_LAYER_ID}
           layout={layerVisibility(showBus)}
-          style={busCircleStyle}
+          paint={busCirclePaint}
         />
       </GeoJSONSource>
 
@@ -191,7 +210,7 @@ const MapLayers = React.memo(function MapLayers({
           type="circle"
           beforeId={METRO_STATIONS_LAYER_ID}
           layout={layerVisibility(showBrt)}
-          style={brtCircleStyle}
+          paint={brtCirclePaint}
         />
       </GeoJSONSource>
 
@@ -201,7 +220,7 @@ const MapLayers = React.memo(function MapLayers({
           type="line"
           beforeId={METRO_STATIONS_LAYER_ID}
           layout={layerVisibility(showMetro)}
-          style={{
+          paint={{
             lineColor: ['get', 'color'],
             lineWidth: 3,
             lineOpacity: 0.85,
@@ -217,7 +236,7 @@ const MapLayers = React.memo(function MapLayers({
           type="line"
           beforeId={METRO_STATIONS_LAYER_ID}
           layout={layerVisibility(showBrt)}
-          style={{
+          paint={{
             lineColor: ['get', 'color'],
             lineWidth: 5,
             lineOpacity: 0.9,

@@ -546,7 +546,7 @@ function MapRoute({
         id={layerId}
         type="line"
         beforeId={beforeId}
-        style={{
+        paint={{
           lineColor: color,
           lineWidth: width,
           lineOpacity: opacity,
