@@ -23,7 +23,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { LocateFixed, Minus, Plus } from 'lucide-react-native';
+import { CircleArrowUp, LocateFixed, Minus, Plus } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useUniwind } from 'uniwind';
 
@@ -32,6 +32,8 @@ type MapContextValue = {
   cameraRef: React.RefObject<CameraRef | null>;
   isLoaded: boolean;
   theme: 'light' | 'dark';
+  bearing: number;
+  setBearing: (b: number) => void;
 };
 
 const MapContext = createContext<MapContextValue | null>(null);
@@ -90,6 +92,7 @@ function Map({
   const mapRef = useRef<MapRef | null>(null);
   const cameraRef = useRef<CameraRef | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [bearing, setBearing] = useState(0);
   const { theme } = useUniwind();
   const mapStyle =
     theme === 'dark'
@@ -107,7 +110,7 @@ function Map({
   }, [isLoaded, markLoaded]);
 
   return (
-    <MapContext value={{ mapRef, cameraRef, isLoaded, theme }}>
+    <MapContext value={{ mapRef, cameraRef, isLoaded, theme, bearing, setBearing }}>
       <View className={cn('relative flex-1', className)}>
         <MapLibreMap
           ref={mapRef}
@@ -116,6 +119,8 @@ function Map({
           onDidFinishLoadingMap={markLoaded}
           onDidFinishLoadingStyle={markLoaded}
           onDidFinishRenderingMapFully={markLoaded}
+          onRegionIsChanging={(e) => setBearing(e.nativeEvent.bearing ?? 0)}
+          onRegionDidChange={(e) => setBearing(e.nativeEvent.bearing ?? 0)}
           onPress={onPress}
           compass={false}
           logo={false}
@@ -265,7 +270,7 @@ function MapControls({
   className,
   onLocate,
 }: MapControlsProps) {
-  const { cameraRef, mapRef } = useMap();
+  const { cameraRef, mapRef, bearing } = useMap();
   const [isLocating, setIsLocating] = useState(false);
 
   const handleZoomIn = async () => {
@@ -310,15 +315,32 @@ function MapControls({
     'bottom-right': { bottom: 140, right: 20 },
   }[position];
 
-  const cardStyle = [
-    controlStyles.card,
-    isDark ? controlStyles.cardDark : controlStyles.cardLight,
-  ];
+  const cardStyle = [controlStyles.card, isDark ? controlStyles.cardDark : controlStyles.cardLight];
   const dividerStyle = isDark ? controlStyles.dividerDark : controlStyles.dividerLight;
   const iconColor = isDark ? '#e2e8f0' : '#334155';
 
+  const handleResetNorth = () => {
+    cameraRef.current?.setStop({ bearing: 0, duration: 300 });
+  };
+
   return (
     <View style={[controlStyles.container, positionStyle]} className={className}>
+      {/* Compass — always visible; rotates with the map, tap to snap north */}
+      <View style={cardStyle}>
+        <ControlButton onPress={handleResetNorth} label="Reset north" isDark={isDark}>
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ rotate: `${-bearing}deg` }],
+            }}>
+            <CircleArrowUp size={20} color={iconColor} strokeWidth={2} />
+          </View>
+        </ControlButton>
+      </View>
+
       {showZoom && (
         <View style={cardStyle}>
           <ControlButton onPress={handleZoomIn} label="Zoom in" isDark={isDark}>
@@ -332,7 +354,11 @@ function MapControls({
       )}
       {showLocate && (
         <View style={cardStyle}>
-          <ControlButton onPress={handleLocatePress} label="My location" isDark={isDark} disabled={isLocating}>
+          <ControlButton
+            onPress={handleLocatePress}
+            label="My location"
+            isDark={isDark}
+            disabled={isLocating}>
             {isLocating ? (
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
