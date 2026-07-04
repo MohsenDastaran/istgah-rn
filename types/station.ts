@@ -8,4 +8,6 @@ export type Station = {
   Previous: string;
   Next: string;
   'Is Active': string;
+  City: string;
+  Type: string;
 };
