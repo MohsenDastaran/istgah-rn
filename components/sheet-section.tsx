@@ -1,6 +1,4 @@
-import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Text as UiText } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { type TrueSheet, TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import {
@@ -15,12 +13,17 @@ import { sheetDetentFraction, useSheetDetent } from '@/lib/sheet-detent-context'
 import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
-import { type BusStop, listBrtStops, searchBusStops } from '@/lib/bus-stops';
+import {
+  type BusStop,
+  formatBusFacilityValue,
+  listBrtStops,
+  searchBusStops,
+} from '@/lib/bus-stops';
 import {
   ArrowLeft,
   Bus,
+  Car,
   ExternalLink,
-  Navigation2,
   RouteOff,
   TrainFront,
   X,
@@ -74,26 +77,28 @@ const SheetHeader = ({ placeholder, clearLabel, onChangeText, value }: SheetHead
 
   return (
     <Animated.View style={[headerStyles.container, isRTL && headerStyles.containerRTL]}>
-    <View className="flex-row items-center gap-2 rounded-full px-4 rtl:flex-row-reverse" style={headerStyles.inputWrap}>
-      <TextInput
-        className="h-full min-h-0 flex-1 p-0 text-base text-white rtl:text-right"
-        style={headerStyles.input}
-        placeholder={placeholder}
-        placeholderTextColor={LIGHT_GRAY}
-        value={value}
-        onChangeText={onChangeText}
-        returnKeyType="search"
-      />
-      {value.length > 0 && (
-        <Pressable
-          onPress={() => onChangeText('')}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={clearLabel}>
-          <X size={18} color={LIGHT_GRAY} strokeWidth={2.25} />
-        </Pressable>
-      )}
-    </View>
+      <View
+        className="flex-row items-center gap-2 rounded-full px-4 rtl:flex-row-reverse"
+        style={headerStyles.inputWrap}>
+        <TextInput
+          className="h-full min-h-0 flex-1 p-0 text-base text-white rtl:text-right"
+          style={headerStyles.input}
+          placeholder={placeholder}
+          placeholderTextColor={LIGHT_GRAY}
+          value={value}
+          onChangeText={onChangeText}
+          returnKeyType="search"
+        />
+        {value.length > 0 && (
+          <Pressable
+            onPress={() => onChangeText('')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={clearLabel}>
+            <X size={18} color={LIGHT_GRAY} strokeWidth={2.25} />
+          </Pressable>
+        )}
+      </View>
     </Animated.View>
   );
 };
@@ -121,47 +126,221 @@ const headerStyles = StyleSheet.create({
   },
 });
 
-// ─── Detail action button ─────────────────────────────────────────────────────
-type DetailActionButtonProps = Omit<ButtonProps, 'children'> & {
-  label: string;
-  icon?: LucideIcon;
-  hint?: string;
-  loading?: boolean;
-  tone?: 'primary' | 'secondary';
-  flipIconRtl?: boolean;
-};
+// ─── Detail layout ────────────────────────────────────────────────────────────
+function ToolbarDivider() {
+  return <View className="w-px self-stretch bg-white/10" />;
+}
 
-function DetailActionButton({
-  label,
+function ToolbarTile({
   icon,
+  label,
   hint,
+  onPress,
   loading,
-  tone = 'primary',
-  flipIconRtl,
-  className,
-  ...props
-}: DetailActionButtonProps) {
+  disabled,
+  accessibilityLabel,
+}: {
+  icon: LucideIcon;
+  label: string;
+  hint?: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+}) {
   return (
-    <View className="gap-1">
-      <Button
-        variant={tone === 'secondary' ? 'outline' : 'default'}
-        className={cn('h-12 w-full rounded-full rtl:flex-row-reverse', className)}
-        {...props}>
-        {loading ? (
-          <ActivityIndicator size="small" color={tone === 'secondary' ? GRAY : '#ffffff'} />
-        ) : icon ? (
-          <Icon as={icon} className={cn('size-[18px]', flipIconRtl && 'rtl:rotate-180')} />
-        ) : null}
-        <UiText>{label}</UiText>
-      </Button>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? (hint ? `${label}, ${hint}` : label)}
+      className={cn(
+        'min-h-[52px] min-w-0 flex-1 items-center justify-center gap-0.5 px-2 py-2.5 active:bg-white/10',
+        (disabled || loading) && 'opacity-50'
+      )}>
+      {loading ? (
+        <ActivityIndicator size="small" color="#ffffff" />
+      ) : (
+        <Icon as={icon} className="size-[18px]" />
+      )}
+      <Text className="text-center text-xs leading-4 font-semibold text-white" numberOfLines={2}>
+        {label}
+      </Text>
       {hint ? (
-        <UiText variant="muted" className="text-center text-xs">
+        <Text className="text-center text-[10px] leading-3 text-[#b2bac8]" numberOfLines={1}>
           {hint}
-        </UiText>
+        </Text>
       ) : null}
+    </Pressable>
+  );
+}
+
+const DetailToolbar = React.memo(function DetailToolbar({
+  onBackToList,
+  onOpenMaps,
+  onPrimaryPress,
+  onClearRoute,
+  route,
+  routeLoading,
+}: {
+  onBackToList: () => void;
+  onOpenMaps: () => void;
+  onPrimaryPress: () => void;
+  onClearRoute: () => void;
+  route: boolean;
+  routeLoading: boolean;
+}) {
+  const { t, isRTL } = useI18n();
+
+  return (
+    <View className="gap-1.5">
+      <Pressable
+        onPress={onBackToList}
+        accessibilityRole="button"
+        accessibilityLabel={t.backToList}
+        className="flex-row items-center gap-1.5 self-start rounded-lg px-2 py-1.5 active:bg-white/10">
+        <Icon as={ArrowLeft} className={cn('size-4', isRTL && 'rotate-180')} />
+        <Text className="text-xs text-[#b2bac8]">{t.backToList}</Text>
+      </Pressable>
+
+      {route ? (
+        <View className="overflow-hidden rounded-xl bg-white/5">
+          <Pressable
+            onPress={onClearRoute}
+            accessibilityRole="button"
+            accessibilityLabel={t.clearRoute}
+            className="min-h-[44px] flex-row items-center justify-center gap-1.5 px-3 py-2.5 active:bg-white/10">
+            <Icon as={RouteOff} className="size-4" />
+            <Text className="text-xs font-semibold text-white">{t.clearRoute}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View className="overflow-hidden rounded-xl bg-white/5">
+          <View className="flex-row items-stretch">
+            <ToolbarTile
+              icon={Car}
+              label={t.driveThere}
+              loading={routeLoading}
+              disabled={routeLoading}
+              onPress={onPrimaryPress}
+              accessibilityLabel={`${t.driveThere}, ${t.drivingOnly}`}
+            />
+            <ToolbarDivider />
+            <ToolbarTile icon={ExternalLink} label={t.openInMaps} onPress={onOpenMaps} />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+});
+
+function DetailHeader({
+  title,
+  subtitle,
+  dotColor,
+  dotSizeClass = 'size-[18px]',
+  dotInactive,
+}: {
+  title: string;
+  subtitle?: string;
+  dotColor: string;
+  dotSizeClass?: string;
+  dotInactive?: boolean;
+}) {
+  return (
+    <View className="flex-row items-center gap-2.5">
+      <View
+        className={cn('shrink-0 rounded-full', dotSizeClass, dotInactive && 'opacity-55')}
+        style={{ backgroundColor: dotColor }}
+      />
+      <View className="min-w-0 flex-1">
+        <Text className="text-base leading-5 font-semibold text-white" numberOfLines={2}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text className="mt-0.5 text-xs text-[#b2bac8]" numberOfLines={2}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
+
+const InfoRow = React.memo(function InfoRow({ label, value }: { label: string; value: string }) {
+  if (!value.trim()) return null;
+  return (
+    <View className="gap-0.5">
+      <Text className="text-[10px] tracking-wide text-[#b2bac8] uppercase">{label}</Text>
+      <Text className="text-[13px] leading-[18px] text-white">{value}</Text>
+    </View>
+  );
+});
+
+function BusAmenities({ stop, lang }: { stop: BusStop; lang: Lang }) {
+  const { t } = useI18n();
+  const fmt = (value: string) => formatBusFacilityValue(value, lang, t);
+
+  const items = [
+    { key: 'seat', label: t.seat, value: fmt(stop.seat) },
+    { key: 'shelter', label: t.shelter, value: fmt(stop.shelter) },
+    { key: 'light', label: t.light, value: fmt(stop.light) },
+    { key: 'disabled', label: t.disabledAccess, value: fmt(stop.disabledAccess) },
+  ].filter((item) => item.value);
+
+  if (items.length === 0) return null;
+
+  return (
+    <View className="gap-1.5">
+      <Text className="text-[10px] font-semibold tracking-wide text-[#b2bac8] uppercase">
+        {t.amenities}
+      </Text>
+      <View className="flex-row flex-wrap gap-1.5">
+        {items.map((item) => (
+          <View key={item.key} className="min-w-[47%] flex-1 rounded-lg bg-white/6 px-2.5 py-1.5">
+            <Text className="text-[10px] text-[#b2bac8]">{item.label}</Text>
+            <Text className="text-xs font-medium text-white">{item.value}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Route info bar ───────────────────────────────────────────────────────────
+const RouteInfoBar = React.memo(function RouteInfoBar({
+  distance,
+  duration,
+  distanceLabel,
+  durationLabel,
+  kmUnit,
+  minUnit,
+}: {
+  distance: number;
+  duration: number;
+  distanceLabel: string;
+  durationLabel: string;
+  kmUnit: string;
+  minUnit: string;
+}) {
+  return (
+    <View className="mb-1 flex-row items-center justify-center gap-3 rounded-xl bg-white/10 px-3 py-2">
+      <View className="items-center">
+        <Text className="text-[10px] text-[#b2bac8]">{distanceLabel}</Text>
+        <Text className="text-sm font-semibold text-white">
+          {distance.toFixed(1)} {kmUnit}
+        </Text>
+      </View>
+      <View className="h-6 w-px bg-white/20" />
+      <View className="items-center">
+        <Text className="text-[10px] text-[#b2bac8]">{durationLabel}</Text>
+        <Text className="text-sm font-semibold text-white">
+          {Math.round(duration)} {minUnit}
+        </Text>
+      </View>
+    </View>
+  );
+});
 
 // ─── Category header ──────────────────────────────────────────────────────────
 const CategoryHeader = React.memo(function CategoryHeader({
@@ -176,7 +355,7 @@ const CategoryHeader = React.memo(function CategoryHeader({
   return (
     <View className="mb-0.5 flex-row items-center gap-1.5 border-b border-white/10 px-0.5 py-2 rtl:flex-row-reverse">
       <IconComp size={13} color={color} strokeWidth={2.5} />
-      <Text className="text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>
+      <Text className="text-[11px] font-semibold tracking-wide uppercase" style={{ color }}>
         {label}
       </Text>
     </View>
@@ -216,7 +395,7 @@ const StationListRow = React.memo(function StationListRow({
   return (
     <Pressable
       onPress={onPress}
-      className="active:opacity-60 h-[52px] justify-center border-b border-white/10">
+      className="h-[52px] justify-center border-b border-white/10 active:opacity-60">
       <View className="flex-row items-center gap-3 rtl:flex-row-reverse">
         <View
           className={cn('size-[11px] shrink-0 rounded-full', dotInactive && 'opacity-45')}
@@ -235,7 +414,10 @@ const StationListRow = React.memo(function StationListRow({
         <View className="max-w-[38%] shrink-0 items-end gap-0.5 rtl:items-start">
           <View className="flex-row items-center gap-1 rtl:flex-row-reverse">
             <TypeIcon size={12} color={typeColor} strokeWidth={2.5} />
-            <Text className="text-[11px] font-semibold" style={{ color: typeColor }} numberOfLines={1}>
+            <Text
+              className="text-[11px] font-semibold"
+              style={{ color: typeColor }}
+              numberOfLines={1}>
               {typeLabel}
             </Text>
           </View>
@@ -325,41 +507,6 @@ const ListEmptyFallback = React.memo(function ListEmptyFallback({
   );
 });
 
-// ─── Route info bar ───────────────────────────────────────────────────────────
-const RouteInfoBar = React.memo(function RouteInfoBar({
-  distance,
-  duration,
-  distanceLabel,
-  durationLabel,
-  kmUnit,
-  minUnit,
-}: {
-  distance: number;
-  duration: number;
-  distanceLabel: string;
-  durationLabel: string;
-  kmUnit: string;
-  minUnit: string;
-}) {
-  return (
-    <View className="flex-row rounded-2xl bg-white/10 px-4 py-3 rtl:flex-row-reverse">
-      <View className="flex-1 items-center">
-        <Text className="mb-1 text-[11px] text-[#b2bac8]">{distanceLabel}</Text>
-        <Text className="text-base font-semibold text-white">
-          {distance.toFixed(1)} {kmUnit}
-        </Text>
-      </View>
-      <View className="w-px bg-white/20" />
-      <View className="flex-1 items-center">
-        <Text className="mb-1 text-[11px] text-[#b2bac8]">{durationLabel}</Text>
-        <Text className="text-base font-semibold text-white">
-          {Math.round(duration)} {minUnit}
-        </Text>
-      </View>
-    </View>
-  );
-});
-
 // ─── Station detail ───────────────────────────────────────────────────────────
 const StationDetail = React.memo(function StationDetail({
   station,
@@ -404,19 +551,21 @@ const StationDetail = React.memo(function StationDetail({
   };
 
   return (
-    <View style={{ gap: GAP }}>
-      <View className="mb-2 flex-row items-center gap-3 rtl:flex-row-reverse">
-        <View
-          className={cn('size-[18px] shrink-0 rounded-full', !station.isActive && 'opacity-55')}
-          style={{ backgroundColor: station.lineColor }}
-        />
-        <View className="flex-1 rtl:items-end">
-          <Text className="text-lg font-semibold text-white">{station.name[lang]}</Text>
-          <Text className="mt-0.5 text-[13px] text-[#b2bac8]">{station.line}</Text>
-        </View>
-      </View>
+    <View className="gap-2.5">
+      <DetailToolbar
+        onBackToList={onBackToList}
+        onOpenMaps={handleOpenMaps}
+        onPrimaryPress={handlePrimaryPress}
+        onClearRoute={clearRoute}
+        route={!!route}
+        routeLoading={routeLoading}
+      />
 
-      {route && routeDistance != null && routeDuration != null && (
+      {!userLocation && !route ? (
+        <Text className="text-center text-[11px] text-[#b2bac8]">{t.locateYourselfFirst}</Text>
+      ) : null}
+
+      {route && routeDistance != null && routeDuration != null ? (
         <RouteInfoBar
           distance={routeDistance}
           duration={routeDuration}
@@ -425,53 +574,14 @@ const StationDetail = React.memo(function StationDetail({
           kmUnit={t.km}
           minUnit={t.min}
         />
-      )}
+      ) : null}
 
-      {!route && (
-        <>
-          <DetailActionButton
-            label={t.getDirections}
-            icon={Navigation2}
-            loading={routeLoading}
-            disabled={routeLoading}
-            onPress={handlePrimaryPress}
-            hint={!userLocation ? t.locateYourselfFirst : undefined}
-          />
-          <DetailActionButton
-            label={t.openInMaps}
-            icon={ExternalLink}
-            tone="secondary"
-            onPress={handleOpenMaps}
-          />
-        </>
-      )}
-
-      {route && (
-        <DetailActionButton
-          label={t.clearRoute}
-          icon={RouteOff}
-          tone="secondary"
-          onPress={clearRoute}
-        />
-      )}
-
-      <DetailActionButton
-        label={t.backToList}
-        icon={ArrowLeft}
-        flipIconRtl
-        tone="secondary"
-        onPress={onBackToList}
+      <DetailHeader
+        title={station.name[lang]}
+        subtitle={station.line}
+        dotColor={station.lineColor}
+        dotInactive={!station.isActive}
       />
-    </View>
-  );
-});
-
-const InfoRow = React.memo(function InfoRow({ label, value }: { label: string; value: string }) {
-  if (!value.trim()) return null;
-  return (
-    <View className="gap-0.5 rtl:items-end">
-      <Text className="text-[11px] uppercase tracking-wide text-[#b2bac8]">{label}</Text>
-      <Text className="text-[13px] leading-[18px] text-white">{value}</Text>
     </View>
   );
 });
@@ -505,6 +615,7 @@ const BusStopDetail = React.memo(function BusStopDetail({
   const displayName = busStopDisplayName(stop, lang);
   const dotColor = isBRT ? '#f97316' : '#64748b';
   const dotSizeClass = isBRT ? 'size-3.5' : 'size-2.5';
+  const transportMode = formatBusFacilityValue(stop.transportMode, lang, t);
 
   const handleDirections = async () => {
     await fetchRoute();
@@ -526,30 +637,21 @@ const BusStopDetail = React.memo(function BusStopDetail({
   };
 
   return (
-    <View style={{ gap: GAP }}>
-      <View className="mb-2 flex-row items-center gap-3 rtl:flex-row-reverse">
-        <View className={cn('shrink-0 rounded-full', dotSizeClass)} style={{ backgroundColor: dotColor }} />
-        <View className="flex-1 rtl:items-end">
-          <Text className="text-lg font-semibold text-white">{displayName}</Text>
-          <Text className="mt-0.5 text-[13px] text-[#b2bac8]">
-            {isBRT ? t.brtStops : t.busStops}
-          </Text>
-        </View>
-      </View>
+    <View className="gap-2.5">
+      <DetailToolbar
+        onBackToList={onBackToList}
+        onOpenMaps={handleOpenMaps}
+        onPrimaryPress={handlePrimaryPress}
+        onClearRoute={clearRoute}
+        route={!!route}
+        routeLoading={routeLoading}
+      />
 
-      <View className="mb-2 gap-1.5">
-        {isBRT && stop.brtLine ? (
-          <View className="self-start rounded-md bg-orange-500/20 px-2 py-0.5 rtl:self-end">
-            <Text className="text-[11px] font-semibold text-orange-400">{stop.brtLine}</Text>
-          </View>
-        ) : null}
-        <InfoRow label={t.busLines} value={stop.lines} />
-        <InfoRow label={t.direction} value={stop.direction} />
-        <InfoRow label={t.stationCode} value={stop.stationCode} />
-        <InfoRow label={t.address} value={stop.address} />
-      </View>
+      {!userLocation && !route ? (
+        <Text className="text-center text-[11px] text-[#b2bac8]">{t.locateYourselfFirst}</Text>
+      ) : null}
 
-      {route && routeDistance != null && routeDuration != null && (
+      {route && routeDistance != null && routeDuration != null ? (
         <RouteInfoBar
           distance={routeDistance}
           duration={routeDuration}
@@ -558,43 +660,30 @@ const BusStopDetail = React.memo(function BusStopDetail({
           kmUnit={t.km}
           minUnit={t.min}
         />
-      )}
+      ) : null}
 
-      {!route && (
-        <>
-          <DetailActionButton
-            label={t.getDirections}
-            icon={Navigation2}
-            loading={routeLoading}
-            disabled={routeLoading}
-            onPress={handlePrimaryPress}
-            hint={!userLocation ? t.locateYourselfFirst : undefined}
-          />
-          <DetailActionButton
-            label={t.openInMaps}
-            icon={ExternalLink}
-            tone="secondary"
-            onPress={handleOpenMaps}
-          />
-        </>
-      )}
-
-      {route && (
-        <DetailActionButton
-          label={t.clearRoute}
-          icon={RouteOff}
-          tone="secondary"
-          onPress={clearRoute}
-        />
-      )}
-
-      <DetailActionButton
-        label={t.backToList}
-        icon={ArrowLeft}
-        flipIconRtl
-        tone="secondary"
-        onPress={onBackToList}
+      <DetailHeader
+        title={displayName}
+        subtitle={isBRT ? t.brtStops : t.busStops}
+        dotColor={dotColor}
+        dotSizeClass={dotSizeClass}
       />
+
+      {isBRT && stop.brtLine ? (
+        <View className="self-start rounded-md bg-orange-500/20 px-2 py-0.5">
+          <Text className="text-[11px] font-semibold text-orange-400">{stop.brtLine}</Text>
+        </View>
+      ) : null}
+
+      <BusAmenities stop={stop} lang={lang} />
+
+      <View className="gap-2 rounded-xl bg-white/5 p-2.5">
+        <InfoRow label={t.busLines} value={stop.lines} />
+        <InfoRow label={t.direction} value={stop.direction} />
+        <InfoRow label={t.stationCode} value={stop.stationCode} />
+        <InfoRow label={t.transportMode} value={transportMode} />
+        <InfoRow label={t.address} value={stop.address} />
+      </View>
     </View>
   );
 });
@@ -803,8 +892,7 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && styles.contentRTL];
 
-  const showStationList =
-    !selected && !isSearching && !isSheetLoading && sections.length > 0;
+  const showStationList = !selected && !isSearching && !isSheetLoading && sections.length > 0;
 
   return (
     <>

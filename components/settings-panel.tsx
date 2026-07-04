@@ -131,6 +131,15 @@ function ReportIssueDialog() {
 }
 
 // ─── About Dialog ─────────────────────────────────────────────────────────────
+const ABOUT_FEATURE_KEYS = [
+  'aboutFeatureMetroBrtBus',
+  'aboutFeatureMultiCity',
+  'aboutFeatureRouting',
+  'aboutFeatureI18n',
+  'aboutFeatureTheme',
+  'aboutFeatureOffline',
+] as const;
+
 function AboutDialog() {
   const { t, isRTL } = useI18n();
   const [open, setOpen] = React.useState(false);
@@ -158,19 +167,27 @@ function AboutDialog() {
             <Text className="text-foreground text-sm font-semibold">{t.whatIsIstgah}</Text>
             <Text className="text-muted-foreground text-sm leading-relaxed">{t.aboutBody}</Text>
           </View>
+
+          <View className="gap-1.5">
+            <Text className="text-foreground text-sm font-semibold">{t.aboutFeaturesTitle}</Text>
+            {ABOUT_FEATURE_KEYS.map((key) => (
+              <Text key={key} className="text-muted-foreground text-sm leading-relaxed">
+                {'\u2022 '}
+                {t[key]}
+              </Text>
+            ))}
+          </View>
         </View>
 
-        <DialogFooter className="rtl:flex-row-reverse">
+        <DialogFooter>
           <Button
             variant="outline"
-            className="rtl:flex-row-reverse"
             onPress={() => Linking.openURL('https://github.com/MohsenDastaran')}>
             <Icon as={User2} className="text-foreground size-4" />
             <Text>{t.developerGitHub}</Text>
           </Button>
           <Button
             variant="outline"
-            className="rtl:flex-row-reverse"
             onPress={() => Linking.openURL('https://github.com/MohsenDastaran/istgah-rn')}>
             <Icon as={Code} className="text-foreground size-4" />
             <Text>{t.appSourceCode}</Text>

@@ -2,7 +2,7 @@
 
 # ایستگاه · Istgah
 
-**نقشه تعاملی ایستگاه‌های مترو تهران — با جستجو، مسیریابی و پشتیبانی کامل از فارسی**
+**نقشه تعاملی حمل‌ونقل عمومی — مترو، BRT و اتوبوس؛ چند شهر، مسیریابی، فارسی/انگلیسی و تم روشن/تاریک**
 
 [![Expo](https://img.shields.io/badge/Expo-56-000020?logo=expo&logoColor=white)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React%20Native-0.85-61DAFB?logo=react&logoColor=black)](https://reactnative.dev)
@@ -29,24 +29,28 @@
 
 ## درباره
 
-**ایستگاه** یک اپلیکیشن موبایل بومی (React Native) برای کاوش ایستگاه‌های مترو و BRT تهران است. همه ایستگاه‌های فعال روی نقشه نمایش داده می‌شوند؛ می‌توانید جستجو کنید، جزئیات هر ایستگاه را ببینید و از موقعیت فعلی‌تان تا ایستگاه انتخاب‌شده مسیریابی دریافت کنید.
+**ایستگاه** یک اپلیکیشن موبایل بومی (React Native) برای کاوش شبکه حمل‌ونقل عمومی در ایران است. ایستگاه‌های **مترو**، **BRT** و **اتوبوس** را روی یک نقشه ببینید، جستجو کنید، جزئیات هر ایستگاه را بخوانید و از موقعیت فعلی‌تان تا مقصد انتخاب‌شده **مسیریابی** دریافت کنید.
 
-رابط کاربری به‌صورت پیش‌فرض از زبان دستگاه پیروی می‌کند و بین **فارسی (RTL)** و **انگلیسی (LTR)** قابل تعویض است.
+از **۶ شهر** (تهران، اصفهان، مشهد، تبریز، کرج، شیراز) شهر پیش‌فرض خود را انتخاب کنید. لایه‌های نقشه را با دکمه‌های بالای صفحه روشن/خاموش کنید. رابط کاربری به‌صورت پیش‌فرض از زبان دستگاه پیروی می‌کند و بین **فارسی (RTL)** و **انگلیسی (LTR)** قابل تعویض است؛ **تم روشن و تاریک** نیز از تنظیمات در دسترس است.
 
 ---
 
 ## ویژگی‌ها
 
-| ویژگی                | توضیح                                                                                       |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| **نقشه تعاملی**      | نمایش ایستگاه‌ها با MapLibre؛ رنگ هر ایستگاه مطابق خط مترو                                  |
-| **جستجوی دوزبانه**   | جستجو با نام فارسی یا انگلیسی                                                               |
-| **برگه پایینی بومی** | تجربه روان با [True Sheet](https://github.com/lodev09/react-native-true-sheet) و Reanimated |
-| **مسیریابی**         | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی)                                 |
-| **موقعیت‌یابی**      | نمایش موقعیت کاربر روی نقشه و دکمه «مکان من»                                                |
-| **تم روشن / تاریک**  | هماهنگ با نقشه و رابط کاربری                                                                |
-| **پشتیبانی RTL**     | چیدمان و متن مناسب برای فارسی                                                               |
-| **۷ خط مترو + BRT**  | داده کامل ایستگاه‌های فعال تهران                                                            |
+| ویژگی                    | توضیح                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| **نقشه تعاملی**          | نمایش ایستگاه‌ها با MapLibre؛ رنگ هر ایستگاه مترو مطابق خط                                   |
+| **مترو، BRT و اتوبوس**   | سه لایه جدا با دکمه‌های بالای صفحه؛ خطوط BRT و ایستگاه‌های اتوبوس تهران                     |
+| **چند شهر**              | تهران، اصفهان، مشهد، تبریز، کرج و شیراز — انتخاب شهر پیش‌فرض از تنظیمات                      |
+| **جستجوی دوزبانه**       | جستجو با نام فارسی یا انگلیسی؛ جستجوی ایستگاه‌های اتوبوس با تأخیر (debounce)                |
+| **برگه پایینی بومی**     | تجربه روان با [True Sheet](https://github.com/lodev09/react-native-true-sheet) و Reanimated |
+| **مسیریابی**             | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی)                                 |
+| **باز کردن در نقشه**      | ارسال مختصات به اپ نقشه دستگاه برای مسیریابی خارجی                                          |
+| **موقعیت‌یابی**          | نمایش موقعیت کاربر روی نقشه و دکمه «مکان من»                                                |
+| **فارسی / انگلیسی**      | تعویض زبان و چیدمان RTL از تنظیمات                                                          |
+| **تم روشن / تاریک**      | هماهنگ با نقشه و رابط کاربری (Uniwind)                                                      |
+| **داده آفلاین**          | ایستگاه‌های مترو و اتوبوس به‌صورت bundle — بدون نیاز به شبکه برای مرور                      |
+| **۷ خط مترو + BRT**      | داده کامل ایستگاه‌های فعال متروی تهران و شبکه BRT                                           |
 
 ---
 
@@ -122,20 +126,24 @@ npm install
 istgah-rn/
 ├── app/                    # صفحات Expo Router
 │   ├── _layout.tsx         # لایه ریشه، تم و Providerها
-│   └── index.tsx           # صفحه اصلی (نقشه + برگه)
+│   └── index.tsx           # صفحه اصلی (نقشه + لایه‌ها + برگه)
 ├── assets/data/
-│   ├── metroStations.ts         # داده خام ایستگاه‌ها
-│   └── metroLines.ts       # رنگ و نام خطوط
+│   ├── metroStations.ts    # داده خام ایستگاه‌های مترو
+│   ├── metroLines.ts       # رنگ و نام خطوط
+│   ├── tehranBusStops.json # ایستگاه‌های اتوبوس و BRT تهران
+│   └── tehranBRTLines.json # خطوط BRT
 ├── components/
-│   ├── sheet-section.tsx   # برگه پایینی، جستجو، جزئیات ایستگاه
-│   └── ui/                 # اجزای UI (نقشه، دکمه، …)
+│   ├── sheet-section.tsx   # برگه پایینی، جستجو، جزئیات
+│   ├── settings-panel.tsx  # تنظیمات (زبان، تم، شهر)
+│   ├── station-layer-toggle.tsx  # کلید مترو / BRT / اتوبوس
+│   └── ui/                 # اجزای UI (نقشه، دیالوگ، …)
 ├── lib/
 │   ├── i18n.ts             # ترجمه فارسی / انگلیسی
-│   ├── metroStations.ts         # تبدیل داده و GeoJSON
-│   ├── stations-context.tsx# state ایستگاه‌ها و مسیریابی
+│   ├── cities.ts           # شهرهای پشتیبانی‌شده
+│   ├── bus-stops.ts        # داده و GeoJSON اتوبوس/BRT
+│   ├── map-layers-context.tsx  # لایه‌های نقشه
+│   ├── stations-context.tsx    # state انتخاب و مسیریابی
 │   └── theme.ts            # تم ناوبری
-└── types/
-    └── station.ts          # تایپ داده ایستگاه
 ```
 
 ---
@@ -152,14 +160,18 @@ flowchart TB
     subgraph State
         Ctx["StationsProvider"]
         I18n["I18nProvider"]
+        Layers["MapLayersProvider"]
+        City["CityProvider"]
     end
 
     subgraph Data
-        Stations["assets/data/metroStations.ts"]
+        Stations["metro + bus GeoJSON"]
         OSRM["OSRM Routing API"]
     end
 
     Stations --> Ctx
+    City --> Map
+    Layers --> Map
     Ctx --> Map
     Ctx --> Sheet
     I18n --> Sheet
@@ -167,15 +179,18 @@ flowchart TB
     OSRM -->|GeoJSON route| Map
 ```
 
-**جریان کاربر:** جستجو یا لمس ایستگاه روی نقشه → انتخاب ایستگاه → «مسیریابی» → دریافت مسیر از OSRM → نمایش روی نقشه.
+**جریان کاربر:** انتخاب لایه (مترو / BRT / اتوبوس) → جستجو یا لمس روی نقشه → جزئیات ایستگاه → «مسیریابی» یا «باز کردن در نقشه» → نمایش مسیر OSRM روی نقشه.
 
 ---
 
 ## داده‌ها
 
-- بیش از **۱۰۰ ایستگاه فعال** در `assets/data/metroStations.ts`
-- خطوط ۱ تا ۷ و BRT با رنگ‌های استاندارد در `assets/data/metroLines.ts`
-- فقط ایستگاه‌هایی با `Is Active: "T"` در اپ نمایش داده می‌شوند
+- بیش از **۱۰۰ ایستگاه فعال مترو** در `assets/data/metroStations.ts` (تهران)
+- **هزاران ایستگاه اتوبوس و BRT** تهران در `assets/data/tehranBusStops.json`
+- خطوط BRT در `assets/data/tehranBRTLines.json`
+- خطوط ۱ تا ۷ با رنگ‌های استاندارد در `assets/data/metroLines.ts`
+- **۶ شهر** با مرکز نقشه از پیش‌تنظیم‌شده در `lib/cities.ts`
+- فقط ایستگاه‌های مترو با `Is Active: "T"` نمایش داده می‌شوند
 - مسیریابی از سرویس عمومی [OSRM](https://router.project-osrm.org) (حالت رانندگی؛ تخمینی)
 
 ---
@@ -218,7 +233,7 @@ flowchart TB
 
 # Istgah · ایستگاه
 
-**An interactive map of Tehran Metro stations — search, directions, and full Persian support**
+**An interactive public transit map — metro, BRT & bus; multi-city, routing, Persian/English, and light/dark mode**
 
 [![Expo](https://img.shields.io/badge/Expo-56-000020?logo=expo&logoColor=white)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React%20Native-0.85-61DAFB?logo=react&logoColor=black)](https://reactnative.dev)
@@ -245,24 +260,28 @@ flowchart TB
 
 ## About
 
-**Istgah** (Persian for _station_) is a native mobile app built with React Native for exploring Tehran's metro and BRT stations. All active stations appear on an interactive map. Search by name, view station details, and get turn-by-turn-style routing from your current location to any station.
+**Istgah** (Persian for _station_) is a native mobile app built with React Native for exploring public transit in Iran. View **metro**, **BRT**, and **regular bus** stops on one map, search by name, read station details, and get **turn-by-turn-style routing** from your location to any stop.
 
-The UI follows the device locale by default and can be switched between **Persian (RTL)** and **English (LTR)** at any time.
+Pick a default city from **6 supported cities** (Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz). Toggle map layers from the header control. The UI follows the device locale by default and switches between **Persian (RTL)** and **English (LTR)**; **light and dark themes** are available in Settings.
 
 ---
 
 ## Features
 
-| Feature                 | Description                                                                                   |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| **Interactive map**     | MapLibre-powered station markers colored by metro line                                        |
-| **Bilingual search**    | Filter stations by Persian or English name                                                    |
-| **Native bottom sheet** | Fluid UX with [True Sheet](https://github.com/lodev09/react-native-true-sheet) and Reanimated |
-| **Directions**          | Route from your location to a station via OSRM (distance & ETA)                               |
-| **User location**       | Live position on the map with a "locate me" control                                           |
-| **Light / dark theme**  | Synchronized map basemap and app chrome                                                       |
-| **RTL support**         | Layout and typography tuned for Persian                                                       |
-| **7 metro lines + BRT** | Complete dataset of active Tehran stations                                                    |
+| Feature                  | Description                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| **Interactive map**      | MapLibre markers colored by metro line                                                        |
+| **Metro, BRT & bus**     | Three toggleable layers; Tehran BRT lines and bus stop dataset                                |
+| **Multi-city**           | Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz — default city in Settings                  |
+| **Bilingual search**     | Filter by Persian or English; debounced bus stop search                                       |
+| **Native bottom sheet**  | Fluid UX with [True Sheet](https://github.com/lodev09/react-native-true-sheet) and Reanimated |
+| **Directions**           | Route from your location via OSRM (distance & ETA)                                            |
+| **Open in Maps**         | Hand off coordinates to the device maps app                                                   |
+| **User location**        | Live position with a locate-me control                                                        |
+| **Persian / English**    | Language switch and RTL layout from Settings                                                  |
+| **Light / dark theme**   | Synchronized map basemap and UI chrome (Uniwind)                                              |
+| **Offline-ready data**   | Bundled metro and bus datasets — browse without network                                       |
+| **7 metro lines + BRT**  | Full active Tehran metro dataset and BRT network                                              |
 
 ---
 
@@ -338,20 +357,24 @@ npm install
 istgah-rn/
 ├── app/                    # Expo Router screens
 │   ├── _layout.tsx         # Root layout, theme, providers
-│   └── index.tsx           # Main screen (map + sheet)
+│   └── index.tsx           # Main screen (map + layers + sheet)
 ├── assets/data/
-│   ├── metroStations.ts         # Raw station dataset
-│   └── metroLines.ts       # Line colors and names
+│   ├── metroStations.ts    # Raw metro station dataset
+│   ├── metroLines.ts       # Line colors and names
+│   ├── tehranBusStops.json # Tehran bus & BRT stops
+│   └── tehranBRTLines.json # BRT line geometries
 ├── components/
-│   ├── sheet-section.tsx   # Bottom sheet, search, station detail
-│   └── ui/                 # UI primitives (map, button, …)
+│   ├── sheet-section.tsx   # Bottom sheet, search, details
+│   ├── settings-panel.tsx  # Settings (language, theme, city)
+│   ├── station-layer-toggle.tsx  # Metro / BRT / Bus toggle
+│   └── ui/                 # UI primitives (map, dialog, …)
 ├── lib/
 │   ├── i18n.ts             # Persian / English strings
-│   ├── metroStations.ts         # Data transforms & GeoJSON
-│   ├── stations-context.tsx# Station state & routing
+│   ├── cities.ts           # Supported cities
+│   ├── bus-stops.ts        # Bus/BRT data & GeoJSON
+│   ├── map-layers-context.tsx  # Map layer visibility
+│   ├── stations-context.tsx    # Selection & routing state
 │   └── theme.ts            # Navigation theme
-└── types/
-    └── station.ts          # Station type definitions
 ```
 
 ---
@@ -368,14 +391,18 @@ flowchart TB
     subgraph State
         Ctx["StationsProvider"]
         I18n["I18nProvider"]
+        Layers["MapLayersProvider"]
+        City["CityProvider"]
     end
 
     subgraph Data
-        Stations["assets/data/metroStations.ts"]
+        Stations["metro + bus GeoJSON"]
         OSRM["OSRM Routing API"]
     end
 
     Stations --> Ctx
+    City --> Map
+    Layers --> Map
     Ctx --> Map
     Ctx --> Sheet
     I18n --> Sheet
@@ -383,15 +410,18 @@ flowchart TB
     OSRM -->|GeoJSON route| Map
 ```
 
-**User flow:** Search or tap a station on the map → select station → "Get Directions" → fetch route from OSRM → render on map.
+**User flow:** Toggle layers (metro / BRT / bus) → search or tap on the map → station details → "Get Directions" or "Open in Maps" → OSRM route on the map.
 
 ---
 
 ## Data
 
-- **100+ active stations** in `assets/data/metroStations.ts`
-- Lines 1–7 and BRT with standard colors in `assets/data/metroLines.ts`
-- Only stations marked `Is Active: "T"` are shown in the app
+- **100+ active metro stations** in `assets/data/metroStations.ts` (Tehran)
+- **Thousands of Tehran bus & BRT stops** in `assets/data/tehranBusStops.json`
+- BRT line geometries in `assets/data/tehranBRTLines.json`
+- Lines 1–7 with standard colors in `assets/data/metroLines.ts`
+- **6 cities** with preset map centers in `lib/cities.ts`
+- Only metro stations marked `Is Active: "T"` are shown
 - Routing uses the public [OSRM](https://router.project-osrm.org) API (driving profile; approximate)
 
 ---

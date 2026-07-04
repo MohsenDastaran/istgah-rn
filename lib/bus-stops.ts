@@ -1,4 +1,5 @@
 import rawBusStops from '../assets/data/tehranBusStops.json';
+import type { Strings } from './i18n';
 
 export type BusStop = {
   id: string;
@@ -11,7 +12,34 @@ export type BusStop = {
   brtLine: string;
   direction: string;
   stationCode: string;
+  seat: string;
+  shelter: string;
+  light: string;
+  disabledAccess: string;
+  transportMode: string;
 };
+
+/** Map raw Persian facility values to localized labels when lang is English. */
+export function formatBusFacilityValue(
+  value: string,
+  lang: 'en' | 'fa',
+  t: Pick<Strings, 'facilityYes' | 'facilityNo' | 'facilityNeeded'>
+): string {
+  const raw = value.trim();
+  if (!raw) return '';
+
+  if (lang === 'fa') return raw;
+
+  const yes = new Set(['دارد', 'بله', 'هست', 'yes']);
+  const no = new Set(['ندارد', 'خیر', 'نیست', 'no', 'عدم ن']);
+  const needed = new Set(['نیاز', 'needed']);
+
+  if (yes.has(raw) || yes.has(raw.toLowerCase())) return t.facilityYes;
+  if (no.has(raw) || no.has(raw.toLowerCase())) return t.facilityNo;
+  if (needed.has(raw) || needed.has(raw.toLowerCase())) return t.facilityNeeded;
+
+  return raw;
+}
 
 function isBRTStop(brt: unknown): boolean {
   if (!brt || brt === '0') return false;
@@ -40,6 +68,11 @@ export const BUS_STOPS: BusStop[] = (
       brtLine: brt && isBRTStop(brt) ? brt : '',
       direction: String(p['DIRECTION'] ?? ''),
       stationCode: String(p['STATIONCOD'] ?? ''),
+      seat: String(p['SEAT'] ?? ''),
+      shelter: String(p['SHELTER'] ?? ''),
+      light: String(p['LIGHT'] ?? ''),
+      disabledAccess: String(p['DISABLED'] ?? ''),
+      transportMode: String(p['TRANSPORTM'] ?? ''),
     };
   });
 
