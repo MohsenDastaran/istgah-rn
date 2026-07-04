@@ -24,7 +24,7 @@ import {
   type ReactNode,
 } from 'react';
 import { CircleArrowUp, LocateFixed, Minus, Plus } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -63,6 +63,8 @@ type MapStyleOption = string | StyleSpecification;
 
 type MapProps = {
   children?: ReactNode;
+  /** Overlay controls rendered outside the native map surface (avoids GL compositing bugs). */
+  controls?: ReactNode;
   /** Custom map styles for light and dark themes. Overrides the default Carto styles. */
   styles?: {
     light?: MapStyleOption;
@@ -88,6 +90,7 @@ const DefaultLoader = () => (
 
 function Map({
   children,
+  controls,
   styles,
   center = [0, 0],
   zoom = 10,
@@ -121,6 +124,7 @@ function Map({
         <MapLibreMap
           ref={mapRef}
           style={{ flex: 1 }}
+          androidView="texture"
           mapStyle={mapStyle}
           onDidFinishLoadingMap={markLoaded}
           onDidFinishLoadingStyle={markLoaded}
@@ -134,6 +138,11 @@ function Map({
           <Camera ref={cameraRef} zoom={zoom} center={center} easing="fly" duration={1000} />
           {children}
         </MapLibreMap>
+        {controls ? (
+          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            {controls}
+          </View>
+        ) : null}
         {showLoader && !isLoaded ? <DefaultLoader /> : null}
       </View>
     </MapContext>
@@ -278,6 +287,18 @@ function MapControls({
 }: MapControlsProps) {
   const { cameraRef, mapRef, bearing } = useMap();
   const [isLocating, setIsLocating] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleZoomIn = async () => {
     if (!cameraRef.current || !mapRef.current) return;
@@ -348,8 +369,13 @@ function MapControls({
     cameraRef.current?.setStop({ bearing: 0, duration: 300 });
   };
 
+  if (keyboardVisible) return null;
+
   return (
-    <View style={[controlStyles.container, positionStyle]} className={className}>
+    <View
+      pointerEvents="box-none"
+      style={[controlStyles.container, positionStyle]}
+      className={className}>
       {/* Compass — fades in when map is rotated off north; tap to reset */}
       <Animated.View
         style={[cardStyle, compassFadeStyle]}

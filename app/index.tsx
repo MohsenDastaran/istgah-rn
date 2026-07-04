@@ -158,8 +158,14 @@ const MapLayers = React.memo(function MapLayers({
 
 // ─── Map content (children of <Map>) ─────────────────────────────────────────
 function MapContent() {
-  const { selectedStation, route, selectStation, setUserLocation, pendingFlyTo, clearPendingFlyTo } =
-    useStations();
+  const {
+    selectedStation,
+    route,
+    selectStation,
+    setUserLocation,
+    pendingFlyTo,
+    clearPendingFlyTo,
+  } = useStations();
   const { city, cityId } = useCity();
   // Safe: MapContent is only ever rendered inside <Map>, which provides MapContext.
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -204,7 +210,39 @@ function MapContent() {
   }, [pendingFlyTo, clearPendingFlyTo, cameraRef]);
 
   if (!mapComponents) return null;
-  const { MapMarker, MapControls, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
+  const { MapMarker, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;
+
+  return (
+    <>
+      <MapLayers
+        selectedStation={selectedStation}
+        route={route}
+        selectStation={selectStation}
+        MapMarker={MapMarker}
+        MapRoute={MapRoute}
+        GeoJSONSource={GeoJSONSource}
+        Layer={Layer}
+      />
+
+      {hasPermission && <MapUserLocation />}
+    </>
+  );
+}
+
+function MapControlsOverlay() {
+  if (!mapComponents) return null;
+  const { MapControls, useMap, useCurrentPosition } = mapComponents;
+  const { setUserLocation } = useStations();
+  const { cameraRef } = useMap();
+  const [hasPermission, setHasPermission] = React.useState(false);
+
+  React.useEffect(() => {
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      setHasPermission(status === 'granted');
+    });
+  }, []);
+
+  const position = useCurrentPosition({ enabled: hasPermission });
 
   const handleLocate = async () => {
     if (!cameraRef.current) return;
@@ -224,26 +262,12 @@ function MapContent() {
   };
 
   return (
-    <>
-      <MapLayers
-        selectedStation={selectedStation}
-        route={route}
-        selectStation={selectStation}
-        MapMarker={MapMarker}
-        MapRoute={MapRoute}
-        GeoJSONSource={GeoJSONSource}
-        Layer={Layer}
-      />
-
-      {hasPermission && <MapUserLocation />}
-
-      <MapControls
-        showZoom
-        showLocate={hasPermission}
-        position="bottom-right"
-        onLocate={handleLocate}
-      />
-    </>
+    <MapControls
+      showZoom
+      showLocate={hasPermission}
+      position="bottom-right"
+      onLocate={handleLocate}
+    />
   );
 }
 
@@ -253,7 +277,7 @@ function MapWithStations() {
   const { Map } = mapComponents;
 
   return (
-    <Map zoom={city.zoom} center={city.center}>
+    <Map zoom={city.zoom} center={city.center} controls={<MapControlsOverlay />}>
       <MapContent />
     </Map>
   );
@@ -319,4 +343,3 @@ const markerStyles = StyleSheet.create({
     borderRadius: 16,
   },
 });
-

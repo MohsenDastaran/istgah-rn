@@ -28,6 +28,11 @@ const translations = {
     backToList: 'Back to List',
     openInMaps: 'Open in Maps',
     defaultCity: 'Default city',
+    metroStations: 'Metro Stations',
+    brtStops: 'BRT Stops',
+    busStops: 'Bus Stops',
+    noResults: 'No results',
+    searching: 'Searching…',
   },
   fa: {
     appName: 'ایستگاه',
@@ -46,6 +51,11 @@ const translations = {
     backToList: 'بازگشت به لیست',
     openInMaps: 'باز کردن در نقشه',
     defaultCity: 'شهر پیش‌فرض',
+    metroStations: 'ایستگاه‌های مترو',
+    brtStops: 'ایستگاه‌های BRT',
+    busStops: 'ایستگاه‌های اتوبوس',
+    noResults: 'نتیجه‌ای یافت نشد',
+    searching: 'در حال جستجو…',
   },
 } as const;
 

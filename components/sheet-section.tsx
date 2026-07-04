@@ -1,3 +1,4 @@
+import { Input } from '@/components/ui/input';
 import { type TrueSheet, TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import {
   ReanimatedTrueSheet,
@@ -8,12 +9,15 @@ import { useI18n } from '@/lib/i18n';
 import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
+import { type BusStop, searchBusStops } from '@/lib/bus-stops';
 import {
   ArrowLeft,
   ArrowRight,
+  Bus,
   ExternalLink,
   Navigation2,
   RouteOff,
+  TrainFront,
   X,
   XIcon,
   type LucideIcon,
@@ -21,17 +25,18 @@ import {
 import * as React from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Platform,
   Pressable,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
+  TextStyle,
   TouchableOpacity,
   View,
   useWindowDimensions,
   type PressableProps,
-  type TextStyle,
+  type SectionListData,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -46,14 +51,14 @@ const GAP = 12;
 const INPUT_HEIGHT = SPACING * 3;
 const BUTTON_HEIGHT = SPACING * 3;
 const HEADER_HEIGHT = SPACING * 5;
+const ROW_HEIGHT = 52;
 
 const DARK = '#282e37';
 const GRAY = '#b2bac8';
-const DARK_GRAY = '#333b48';
 const LIGHT_GRAY = '#ebedf1';
 const DARK_BLUE = '#1f64ae';
 
-// ─── Sheet Header with wired search ──────────────────────────────────────────
+// ─── Sheet Header ─────────────────────────────────────────────────────────────
 interface SheetHeaderProps {
   placeholder: string;
   isRTL: boolean;
@@ -105,19 +110,7 @@ const headerStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  inputWrapRTL: {
-    flexDirection: 'row-reverse',
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    height: INPUT_HEIGHT,
-    color: 'white',
-    padding: 0,
-  },
-  rtlInput: {
-    writingDirection: 'rtl',
-  } as TextStyle,
+  inputWrapRTL: { flexDirection: 'row-reverse' },
 });
 
 // ─── Pill button ──────────────────────────────────────────────────────────────
@@ -170,36 +163,50 @@ const btnStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  contentRTL: {
-    flexDirection: 'row-reverse',
-  },
-  secondary: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
+  content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  contentRTL: { flexDirection: 'row-reverse' },
+  secondary: { backgroundColor: 'rgba(255,255,255,0.12)' },
   pressed: { opacity: 0.8 },
-  active: { backgroundColor: '#2a7fd4' },
   text: { color: '#fff' },
   secondaryText: { color: LIGHT_GRAY },
   hint: { fontSize: 10, color: 'rgba(255, 255, 255, 0.5)' },
   loader: { position: 'absolute', right: SPACING },
 });
 
-// ─── Button row ───────────────────────────────────────────────────────────────
-const ButtonRow = ({ children, isRTL }: { children: React.ReactNode; isRTL: boolean }) => (
-  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: GAP }}>
-    {React.Children.map(children, (child) => (
-      <View style={{ flex: 1 }}>{child}</View>
-    ))}
-  </View>
-);
+// ─── Category header ──────────────────────────────────────────────────────────
+const CategoryHeader = React.memo(function CategoryHeader({
+  label,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  icon: LucideIcon;
+  color: string;
+}) {
+  return (
+    <View style={catStyles.header}>
+      <Icon size={13} color={color} strokeWidth={2.5} />
+      <Text style={[catStyles.label, { color }]}>{label}</Text>
+    </View>
+  );
+});
 
-// ─── Station row in the list ──────────────────────────────────────────────────
-const StationRow = ({
+const catStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 2,
+  },
+  label: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
+});
+
+// ─── Metro station row ────────────────────────────────────────────────────────
+const MetroRow = React.memo(function MetroRow({
   station,
   isRTL,
   onPress,
@@ -207,45 +214,84 @@ const StationRow = ({
   station: Station;
   isRTL: boolean;
   onPress: () => void;
-}) => (
-  <Pressable
-    onPress={onPress}
-    style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
-    <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
-      <View
-        style={[
-          rowStyles.dot,
-          { backgroundColor: station.lineColor },
-          !station.isActive && rowStyles.dotInactive,
-        ]}
-      />
-      <View style={[rowStyles.textWrap, isRTL && rowStyles.textWrapRTL]}>
-        <Text style={rowStyles.name}>{isRTL ? station.name.fa : station.name.en}</Text>
-        <Text style={rowStyles.line}>{station.line}</Text>
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
+      <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
+        <View
+          style={[
+            rowStyles.dot,
+            { backgroundColor: station.lineColor },
+            !station.isActive && rowStyles.dotInactive,
+          ]}
+        />
+        <View style={[rowStyles.textWrap, isRTL && rowStyles.textWrapRTL]}>
+          <Text style={rowStyles.name} numberOfLines={1}>
+            {isRTL ? station.name.fa : station.name.en}
+          </Text>
+          <Text style={rowStyles.sub} numberOfLines={1}>
+            {station.line}
+          </Text>
+        </View>
       </View>
-    </View>
-  </Pressable>
-);
+    </Pressable>
+  );
+});
+
+// ─── Bus stop row ─────────────────────────────────────────────────────────────
+const BusRow = React.memo(function BusRow({
+  stop,
+  isRTL,
+  onPress,
+}: {
+  stop: BusStop;
+  isRTL: boolean;
+  onPress: () => void;
+}) {
+  const dotColor = stop.isBRT ? '#f97316' : '#64748b';
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [rowStyles.row, pressed && rowStyles.pressed]}>
+      <View style={[rowStyles.inner, isRTL && rowStyles.innerRTL]}>
+        <View style={[rowStyles.dot, { backgroundColor: dotColor }]} />
+        <View style={[rowStyles.textWrap, isRTL && rowStyles.textWrapRTL]}>
+          <Text style={rowStyles.name} numberOfLines={1}>
+            {stop.name}
+          </Text>
+          {stop.lines ? (
+            <Text style={rowStyles.sub} numberOfLines={1}>
+              {stop.isBRT ? stop.brtLine : stop.lines}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+});
 
 const rowStyles = StyleSheet.create({
   row: {
-    paddingVertical: SPACING * 0.75,
+    height: ROW_HEIGHT,
+    justifyContent: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: 'rgba(255,255,255,0.07)',
   },
   pressed: { opacity: 0.6 },
   inner: { flexDirection: 'row', alignItems: 'center', gap: GAP },
   innerRTL: { flexDirection: 'row-reverse' },
-  dot: { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },
-  dotInactive: { opacity: 0.55 },
+  dot: { width: 11, height: 11, borderRadius: 6, flexShrink: 0 },
+  dotInactive: { opacity: 0.45 },
   textWrap: { flex: 1 },
   textWrapRTL: { alignItems: 'flex-end' },
   name: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  line: { color: GRAY, fontSize: 12, marginTop: 2 },
+  sub: { color: GRAY, fontSize: 12, marginTop: 1 },
 });
 
 // ─── Route info bar ───────────────────────────────────────────────────────────
-const RouteInfoBar = ({
+const RouteInfoBar = React.memo(function RouteInfoBar({
   distance,
   duration,
   distanceLabel,
@@ -257,19 +303,21 @@ const RouteInfoBar = ({
   distanceLabel: string;
   durationLabel: string;
   isRTL: boolean;
-}) => (
-  <View style={[routeStyles.bar, isRTL && routeStyles.barRTL]}>
-    <View style={routeStyles.cell}>
-      <Text style={routeStyles.label}>{distanceLabel}</Text>
-      <Text style={routeStyles.value}>{distance.toFixed(1)} km</Text>
+}) {
+  return (
+    <View style={[routeStyles.bar, isRTL && routeStyles.barRTL]}>
+      <View style={routeStyles.cell}>
+        <Text style={routeStyles.label}>{distanceLabel}</Text>
+        <Text style={routeStyles.value}>{distance.toFixed(1)} km</Text>
+      </View>
+      <View style={routeStyles.divider} />
+      <View style={routeStyles.cell}>
+        <Text style={routeStyles.label}>{durationLabel}</Text>
+        <Text style={routeStyles.value}>{Math.round(duration)} min</Text>
+      </View>
     </View>
-    <View style={routeStyles.divider} />
-    <View style={routeStyles.cell}>
-      <Text style={routeStyles.label}>{durationLabel}</Text>
-      <Text style={routeStyles.value}>{Math.round(duration)} min</Text>
-    </View>
-  </View>
-);
+  );
+});
 
 const routeStyles = StyleSheet.create({
   bar: {
@@ -286,8 +334,8 @@ const routeStyles = StyleSheet.create({
   value: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
 
-// ─── Station detail view ──────────────────────────────────────────────────────
-const StationDetail = ({
+// ─── Station detail ───────────────────────────────────────────────────────────
+const StationDetail = React.memo(function StationDetail({
   station,
   isRTL,
   sheetRef,
@@ -295,7 +343,7 @@ const StationDetail = ({
   station: Station;
   isRTL: boolean;
   sheetRef: React.RefObject<TrueSheet | null>;
-}) => {
+}) {
   const { t } = useI18n();
   const {
     route,
@@ -315,8 +363,7 @@ const StationDetail = ({
 
   const handleOpenMaps = () => {
     const [lng, lat] = station.coordinates;
-    const label = isRTL ? station.name.fa : station.name.en;
-    openMapsDirections(lat, lng, label);
+    openMapsDirections(lat, lng, isRTL ? station.name.fa : station.name.en);
   };
 
   const handleClose = () => {
@@ -327,7 +374,6 @@ const StationDetail = ({
 
   return (
     <View style={{ gap: GAP }}>
-      {/* Station header */}
       <View style={[detailStyles.header, isRTL && detailStyles.headerRTL]}>
         <View
           style={[
@@ -342,15 +388,6 @@ const StationDetail = ({
         </View>
       </View>
 
-      {/* {!station.isActive && (
-        <View style={[detailStyles.notice, isRTL && detailStyles.noticeRTL]}>
-          <Text style={[detailStyles.noticeText, isRTL && detailStyles.noticeTextRTL]}>
-            {t.stationMayNotBeFinished}
-          </Text>
-        </View>
-      )} */}
-
-      {/* Route info */}
       {route && routeDistance != null && routeDuration != null && (
         <RouteInfoBar
           distance={routeDistance}
@@ -361,7 +398,6 @@ const StationDetail = ({
         />
       )}
 
-      {/* Directions */}
       {!route && (
         <>
           <SheetButton
@@ -383,7 +419,6 @@ const StationDetail = ({
         </>
       )}
 
-      {/* Clear route */}
       {route && (
         <SheetButton
           text={t.clearRoute}
@@ -394,7 +429,6 @@ const StationDetail = ({
         />
       )}
 
-      {/* Back to list */}
       <SheetButton
         text={t.backToList}
         icon={isRTL ? ArrowRight : ArrowLeft}
@@ -404,7 +438,7 @@ const StationDetail = ({
       />
     </View>
   );
-};
+});
 
 const detailStyles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: GAP, marginBottom: SPACING / 2 },
@@ -415,36 +449,99 @@ const detailStyles = StyleSheet.create({
   textWrapRTL: { alignItems: 'flex-end' },
   name: { color: '#fff', fontSize: 18, fontWeight: '600' },
   line: { color: GRAY, fontSize: 13, marginTop: 2 },
-  notice: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderColor: 'rgba(245, 158, 11, 0.35)',
-    borderWidth: 1,
-    borderRadius: SPACING,
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING * 0.75,
-  },
-  noticeRTL: { alignItems: 'flex-end' },
-  noticeText: { color: '#fbbf24', fontSize: 13, lineHeight: 18 },
-  noticeTextRTL: { textAlign: 'right' },
 });
 
-// ─── Animated floating button ─────────────────────────────────────────────────
+// ─── Search results (categorised) ────────────────────────────────────────────
+type ListItem =
+  | { kind: 'metro'; station: Station }
+  | { kind: 'brt'; stop: BusStop }
+  | { kind: 'bus'; stop: BusStop };
+
+type Section = SectionListData<ListItem, { title: string; icon: LucideIcon; color: string }>;
+
+const DEBOUNCE_MS = 300;
+
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-// ─── Inner (must live inside ReanimatedTrueSheetProvider) ────────────────────
+// ─── Inner ────────────────────────────────────────────────────────────────────
 const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
-  const { t, isRTL, lang, setLang } = useI18n();
+  const { t, isRTL } = useI18n();
   const { filteredStations, selectedStation, selectStation, searchQuery, setSearchQuery } =
     useStations();
 
+  // ── Debounced query ──────────────────────────────────────────────────────────
+  const [debouncedQuery, setDebouncedQuery] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = React.useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (text.trim().length > 0) {
+        setIsSearching(true);
+        debounceRef.current = setTimeout(() => {
+          setDebouncedQuery(text);
+          setIsSearching(false);
+        }, DEBOUNCE_MS);
+      } else {
+        setDebouncedQuery('');
+        setIsSearching(false);
+      }
+    },
+    [setSearchQuery]
+  );
+
+  // ── Bus stop search results ──────────────────────────────────────────────────
+  const busResults = React.useMemo(
+    () => (debouncedQuery.length >= 2 ? searchBusStops(debouncedQuery) : { brt: [], bus: [] }),
+    [debouncedQuery]
+  );
+
+  // ── Section data ─────────────────────────────────────────────────────────────
+  const hasQuery = debouncedQuery.trim().length > 0 || isSearching;
+
+  const metroItems = React.useMemo(
+    (): ListItem[] => filteredStations.map((s) => ({ kind: 'metro', station: s })),
+    [filteredStations]
+  );
+
+  const brtItems = React.useMemo(
+    (): ListItem[] => busResults.brt.map((s) => ({ kind: 'brt', stop: s })),
+    [busResults.brt]
+  );
+
+  const busItems = React.useMemo(
+    (): ListItem[] => busResults.bus.map((s) => ({ kind: 'bus', stop: s })),
+    [busResults.bus]
+  );
+
+  const sections = React.useMemo((): Section[] => {
+    const result: Section[] = [];
+    if (metroItems.length > 0)
+      result.push({ title: t.metroStations, icon: TrainFront, color: '#60a5fa', data: metroItems });
+    if (brtItems.length > 0)
+      result.push({ title: t.brtStops, icon: Bus, color: '#fb923c', data: brtItems });
+    if (busItems.length > 0)
+      result.push({ title: t.busStops, icon: Bus, color: '#94a3b8', data: busItems });
+    return result;
+  }, [metroItems, brtItems, busItems, t]);
+
+  // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
-  const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
+  React.useEffect(() => {
+    if (selectedStation && currentDetent === 0) {
+      sheetRef.current?.resize(1);
+    }
+  }, [selectedStation, currentDetent]);
 
+  // ── Floating close button ────────────────────────────────────────────────────
+  const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
   React.useEffect(() => {
     floatingOpacity.value = withTiming(currentDetent === 1 ? 1 : 0, {
       duration: 280,
@@ -454,32 +551,56 @@ const SheetSectionInner = () => {
 
   const floatingStyle = useAnimatedStyle(() => {
     const translateY = Math.min(-HEADER_HEIGHT, -(height - animatedPosition.value));
-    return {
-      opacity: floatingOpacity.value,
-      transform: [{ translateY }],
-    };
+    return { opacity: floatingOpacity.value, transform: [{ translateY }] };
   });
+
+  const handleStationPress = React.useCallback(
+    (station: Station) => selectStation(station, { flyTo: true }),
+    [selectStation]
+  );
+
+  const handleSheetClose = React.useCallback(() => {
+    selectStation(null);
+    sheetRef.current?.resize(0);
+  }, [selectStation]);
+
+  // ── Renderers ────────────────────────────────────────────────────────────────
+  const renderSectionHeader = React.useCallback(
+    ({ section }: { section: Section }) => (
+      <CategoryHeader label={section.title} icon={section.icon} color={section.color} />
+    ),
+    []
+  );
+
+  const renderItem = React.useCallback(
+    ({ item }: { item: ListItem }) => {
+      if (item.kind === 'metro') {
+        return (
+          <MetroRow
+            station={item.station}
+            isRTL={isRTL}
+            onPress={() => handleStationPress(item.station)}
+          />
+        );
+      }
+      if (item.kind === 'brt' || item.kind === 'bus') {
+        return <BusRow stop={item.stop} isRTL={isRTL} onPress={() => {}} />;
+      }
+      return null;
+    },
+    [isRTL, handleStationPress]
+  );
+
+  const keyExtractor = React.useCallback(
+    (item: ListItem) =>
+      item.kind === 'metro' ? `metro-${item.station.id}` : `${item.kind}-${item.stop.id}`,
+    []
+  );
 
   const contentStyle = [styles.content, isRTL && { direction: 'rtl' as const }];
 
-  // When a station is selected from the map (sheet is minimised at detent 0),
-  // expand to the 'auto' detent.  If the sheet is already open (the user tapped
-  // a row in the list), skip the resize — swapping the content is enough and
-  // calling resize(1) while already at detent 1 causes a native re-layout that
-  // briefly expands the sheet to full-height, making the map vanish.
-  React.useEffect(() => {
-    if (selectedStation && currentDetent === 0) {
-      sheetRef.current?.resize(1);
-    }
-  }, [selectedStation, currentDetent]);
+  const showStationList = !selectedStation && !isSearching && !(sections.length === 0 && hasQuery);
 
-  const handleStationPress = (station: Station) => {
-    selectStation(station, { flyTo: true });
-  };
-  const handleSheetClose = () => {
-    selectStation(null);
-    sheetRef.current?.resize(0);
-  };
   return (
     <>
       <Animated.View pointerEvents={currentDetent === 1 ? 'auto' : 'none'} style={floatingStyle}>
@@ -497,64 +618,60 @@ const SheetSectionInner = () => {
       <ReanimatedTrueSheet
         name="main"
         ref={sheetRef}
-        detents={[minHeight / height, 'auto', 1]}
+        detents={[minHeight / height, 0.5, 1]}
         initialDetentIndex={0}
         dimmed={false}
         dismissible={false}
+        scrollable={showStationList}
+        scrollableOptions={{ scrollingExpandsSheet: true }}
         style={contentStyle}
         detached
         backgroundColor={DARK}
-        onDetentChange={(e) => {
-          setCurrentDetent(e.nativeEvent.index);
-        }}
+        onDetentChange={(e) => setCurrentDetent(e.nativeEvent.index)}
         header={
           <SheetHeader
             placeholder={t.search}
             isRTL={isRTL}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
           />
         }>
-        {/* ── Station detail view ── */}
         {selectedStation ? (
           <StationDetail station={selectedStation} isRTL={isRTL} sheetRef={sheetRef} />
+        ) : isSearching ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="small" color={GRAY} />
+          </View>
+        ) : sections.length === 0 && hasQuery ? (
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>{t.noResults}</Text>
+          </View>
         ) : (
-          <>
-            {/* ── Station list ── */}
-
-            <FlatList
-              data={filteredStations}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <StationRow station={item} isRTL={isRTL} onPress={() => handleStationPress(item)} />
-              )}
-              style={{ maxHeight: 280 }}
-            />
-
-            <View style={{ height: SPACING / 2 }} />
-
-            {/* Language switcher */}
-            <ButtonRow isRTL={isRTL}>
-              <SheetButton
-                text={t.english}
-                onPress={() => setLang('en')}
-                style={lang === 'en' && btnStyles.active}
-              />
-              <SheetButton
-                text={t.persian}
-                onPress={() => setLang('fa')}
-                style={lang === 'fa' && btnStyles.active}
-              />
-            </ButtonRow>
-          </>
+          <SectionList
+            sections={sections}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            renderSectionHeader={renderSectionHeader}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            windowSize={7}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews={Platform.OS === 'android'}
+            nestedScrollEnabled
+            stickySectionHeadersEnabled={false}
+            showsVerticalScrollIndicator={false}
+            extraData={isRTL}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+          />
         )}
       </ReanimatedTrueSheet>
     </>
   );
 };
 
-// ─── Public export — manages its own providers ────────────────────────────────
+// ─── Public export ────────────────────────────────────────────────────────────
 export function SheetSection() {
   return (
     <TrueSheetProvider>
@@ -579,20 +696,28 @@ const styles = StyleSheet.create({
     borderWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 0 }),
     elevation: 4,
   },
-  content: {
-    padding: SPACING,
-    gap: GAP,
-  },
-  heading: {
-    marginBottom: SPACING / 2,
-  },
-  rtlBlock: {
-    alignItems: 'flex-end',
-  },
   floatingBtnContent: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  content: { padding: SPACING, gap: GAP },
+  list: { flex: 1 },
+  listContent: { paddingBottom: SPACING },
+  centered: { paddingVertical: SPACING, alignItems: 'center' },
+  emptyText: { color: GRAY, fontSize: 14 },
+  inputWrapRTL: {
+    flexDirection: 'row-reverse',
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    height: INPUT_HEIGHT,
+    color: 'white',
+    padding: 0,
+  },
+  rtlInput: {
+    writingDirection: 'rtl',
+  } as TextStyle,
 });
