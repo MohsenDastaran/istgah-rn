@@ -1,4 +1,8 @@
 import { Input } from '@/components/ui/input';
+import { Button, type ButtonProps } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { Text as UiText } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
 import { type TrueSheet, TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import {
   ReanimatedTrueSheet,
@@ -35,7 +39,6 @@ import {
   TextInput,
   View,
   useWindowDimensions,
-  type PressableProps,
   type SectionListData,
   type TextStyle,
 } from 'react-native';
@@ -50,14 +53,12 @@ import Animated, {
 const SPACING = 16;
 const GAP = 12;
 const INPUT_HEIGHT = SPACING * 3;
-const BUTTON_HEIGHT = SPACING * 3;
 const HEADER_HEIGHT = SPACING * 5;
 const ROW_HEIGHT = 52;
 
 const DARK = '#282e37';
 const GRAY = '#b2bac8';
 const LIGHT_GRAY = '#ebedf1';
-const DARK_BLUE = '#1f64ae';
 
 // ─── Sheet Header ─────────────────────────────────────────────────────────────
 interface SheetHeaderProps {
@@ -124,65 +125,47 @@ const headerStyles = StyleSheet.create({
   } as TextStyle,
 });
 
-// ─── Pill button ──────────────────────────────────────────────────────────────
-interface SheetButtonProps extends PressableProps {
-  text: string;
-  hint?: string;
-  loading?: boolean;
-  variant?: 'primary' | 'secondary';
+// ─── Detail action button ─────────────────────────────────────────────────────
+type DetailActionButtonProps = Omit<ButtonProps, 'children'> & {
+  label: string;
   icon?: LucideIcon;
+  hint?: string;
   isRTL?: boolean;
-}
+  loading?: boolean;
+  tone?: 'primary' | 'secondary';
+};
 
-const SheetButton = ({
-  text,
+function DetailActionButton({
+  label,
+  icon,
   hint,
+  isRTL,
   loading,
-  style,
-  variant = 'primary',
-  icon: Icon,
-  isRTL = false,
-  ...rest
-}: SheetButtonProps) => (
-  <Pressable
-    style={(state) => [
-      btnStyles.button,
-      variant === 'secondary' && btnStyles.secondary,
-      state.pressed && btnStyles.pressed,
-      typeof style === 'function' ? style(state) : style,
-    ]}
-    {...rest}>
-    <View style={[btnStyles.content, isRTL && btnStyles.contentRTL]}>
-      {Icon && (
-        <Icon size={18} color={variant === 'secondary' ? LIGHT_GRAY : '#fff'} strokeWidth={2.25} />
-      )}
-      <Text style={[btnStyles.text, variant === 'secondary' && btnStyles.secondaryText]}>
-        {text}
-      </Text>
+  tone = 'primary',
+  className,
+  ...props
+}: DetailActionButtonProps) {
+  return (
+    <View className="gap-1">
+      <Button
+        variant={tone === 'secondary' ? 'outline' : 'default'}
+        className={cn('h-12 w-full rounded-full', isRTL && 'flex-row-reverse', className)}
+        {...props}>
+        {loading ? (
+          <ActivityIndicator size="small" color={tone === 'secondary' ? GRAY : '#ffffff'} />
+        ) : icon ? (
+          <Icon as={icon} className="size-[18px]" />
+        ) : null}
+        <UiText>{label}</UiText>
+      </Button>
+      {hint ? (
+        <UiText variant="muted" className="text-center text-xs">
+          {hint}
+        </UiText>
+      ) : null}
     </View>
-    {hint && <Text style={btnStyles.hint}>{hint}</Text>}
-    {loading && <ActivityIndicator style={btnStyles.loader} size="small" color="#fff" />}
-  </Pressable>
-);
-
-const btnStyles = StyleSheet.create({
-  button: {
-    height: BUTTON_HEIGHT,
-    padding: SPACING,
-    borderRadius: BUTTON_HEIGHT,
-    backgroundColor: DARK_BLUE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  contentRTL: { flexDirection: 'row-reverse' },
-  secondary: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  pressed: { opacity: 0.8 },
-  text: { color: '#fff' },
-  secondaryText: { color: LIGHT_GRAY },
-  hint: { fontSize: 10, color: 'rgba(255, 255, 255, 0.5)' },
-  loader: { position: 'absolute', right: SPACING },
-});
+  );
+}
 
 // ─── Category header ──────────────────────────────────────────────────────────
 const CategoryHeader = React.memo(function CategoryHeader({
@@ -459,11 +442,21 @@ const StationDetail = React.memo(function StationDetail({
     userLocation,
     fetchRoute,
     clearRoute,
+    locateUser,
   } = useStations();
 
   const handleDirections = async () => {
     await fetchRoute();
     sheetRef.current?.resize(1);
+  };
+
+  const handlePrimaryPress = async () => {
+    if (!userLocation) {
+      sheetRef.current?.resize(0);
+      await locateUser();
+      return;
+    }
+    await handleDirections();
   };
 
   const handleOpenMaps = () => {
@@ -499,40 +492,40 @@ const StationDetail = React.memo(function StationDetail({
 
       {!route && (
         <>
-          <SheetButton
-            text={t.getDirections}
+          <DetailActionButton
+            label={t.getDirections}
             icon={Navigation2}
             isRTL={isRTL}
             loading={routeLoading}
-            disabled={!userLocation || routeLoading}
-            onPress={handleDirections}
+            disabled={routeLoading}
+            onPress={handlePrimaryPress}
             hint={!userLocation ? t.locateYourselfFirst : undefined}
           />
-          <SheetButton
-            text={t.openInMaps}
+          <DetailActionButton
+            label={t.openInMaps}
             icon={ExternalLink}
             isRTL={isRTL}
-            variant="secondary"
+            tone="secondary"
             onPress={handleOpenMaps}
           />
         </>
       )}
 
       {route && (
-        <SheetButton
-          text={t.clearRoute}
+        <DetailActionButton
+          label={t.clearRoute}
           icon={RouteOff}
           isRTL={isRTL}
-          variant="secondary"
+          tone="secondary"
           onPress={clearRoute}
         />
       )}
 
-      <SheetButton
-        text={t.backToList}
+      <DetailActionButton
+        label={t.backToList}
         icon={isRTL ? ArrowRight : ArrowLeft}
         isRTL={isRTL}
-        variant="secondary"
+        tone="secondary"
         onPress={onBackToList}
       />
     </View>
@@ -605,6 +598,7 @@ const BusStopDetail = React.memo(function BusStopDetail({
     userLocation,
     fetchRoute,
     clearRoute,
+    locateUser,
   } = useStations();
 
   const displayName =
@@ -615,6 +609,15 @@ const BusStopDetail = React.memo(function BusStopDetail({
   const handleDirections = async () => {
     await fetchRoute();
     sheetRef.current?.resize(1);
+  };
+
+  const handlePrimaryPress = async () => {
+    if (!userLocation) {
+      sheetRef.current?.resize(0);
+      await locateUser();
+      return;
+    }
+    await handleDirections();
   };
 
   const handleOpenMaps = () => {
@@ -658,40 +661,40 @@ const BusStopDetail = React.memo(function BusStopDetail({
 
       {!route && (
         <>
-          <SheetButton
-            text={t.getDirections}
+          <DetailActionButton
+            label={t.getDirections}
             icon={Navigation2}
             isRTL={isRTL}
             loading={routeLoading}
-            disabled={!userLocation || routeLoading}
-            onPress={handleDirections}
+            disabled={routeLoading}
+            onPress={handlePrimaryPress}
             hint={!userLocation ? t.locateYourselfFirst : undefined}
           />
-          <SheetButton
-            text={t.openInMaps}
+          <DetailActionButton
+            label={t.openInMaps}
             icon={ExternalLink}
             isRTL={isRTL}
-            variant="secondary"
+            tone="secondary"
             onPress={handleOpenMaps}
           />
         </>
       )}
 
       {route && (
-        <SheetButton
-          text={t.clearRoute}
+        <DetailActionButton
+          label={t.clearRoute}
           icon={RouteOff}
           isRTL={isRTL}
-          variant="secondary"
+          tone="secondary"
           onPress={clearRoute}
         />
       )}
 
-      <SheetButton
-        text={t.backToList}
+      <DetailActionButton
+        label={t.backToList}
         icon={isRTL ? ArrowRight : ArrowLeft}
         isRTL={isRTL}
-        variant="secondary"
+        tone="secondary"
         onPress={onBackToList}
       />
     </View>
@@ -782,11 +785,18 @@ const SheetSectionInner = () => {
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
 
+  const selectedKey = selected
+    ? selected.kind === 'metro'
+      ? `metro-${selected.station.id}`
+      : `${selected.kind}-${selected.stop.id}`
+    : null;
+
+  // Expand only when the user picks a station — not when they collapse to peek (e.g. locate).
   React.useEffect(() => {
-    if (selected && currentDetent === 0) {
+    if (selectedKey) {
       sheetRef.current?.resize(1);
     }
-  }, [selected, currentDetent]);
+  }, [selectedKey]);
 
   // ── Floating close button ────────────────────────────────────────────────────
   const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);

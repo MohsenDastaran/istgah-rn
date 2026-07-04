@@ -350,7 +350,7 @@ function MapContent() {
 function MapControlsOverlay() {
   if (!mapComponents) return null;
   const { MapControls, useMap, useCurrentPosition } = mapComponents;
-  const { setUserLocation } = useStations();
+  const { setUserLocation, registerLocateUser } = useStations();
   const { cameraRef } = useMap();
   const [hasPermission, setHasPermission] = React.useState(false);
 
@@ -362,7 +362,7 @@ function MapControlsOverlay() {
 
   const position = useCurrentPosition({ enabled: hasPermission });
 
-  const handleLocate = async () => {
+  const handleLocate = React.useCallback(async () => {
     if (!cameraRef.current) return;
     try {
       const coords = position?.coords
@@ -377,7 +377,12 @@ function MapControlsOverlay() {
     } catch (error) {
       console.error('Location error:', error);
     }
-  };
+  }, [cameraRef, position, setUserLocation]);
+
+  React.useEffect(() => {
+    registerLocateUser(handleLocate);
+    return () => registerLocateUser(null);
+  }, [handleLocate, registerLocateUser]);
 
   return (
     <MapControls

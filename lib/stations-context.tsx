@@ -41,6 +41,8 @@ type StationsContextValue = {
   setUserLocation: (coords: [number, number] | null) => void;
   fetchRoute: () => Promise<void>;
   clearRoute: () => void;
+  locateUser: () => Promise<void>;
+  registerLocateUser: (handler: (() => Promise<void>) | null) => void;
   getSelectionLabel: (isRTL: boolean) => string;
 };
 
@@ -55,6 +57,15 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
   const [routeLoading, setRouteLoading] = React.useState(false);
   const [userLocation, setUserLocation] = React.useState<[number, number] | null>(null);
   const [pendingFlyTo, setPendingFlyTo] = React.useState<[number, number] | null>(null);
+  const locateUserRef = React.useRef<(() => Promise<void>) | null>(null);
+
+  const registerLocateUser = React.useCallback((handler: (() => Promise<void>) | null) => {
+    locateUserRef.current = handler;
+  }, []);
+
+  const locateUser = React.useCallback(async () => {
+    await locateUserRef.current?.();
+  }, []);
 
   const filteredStations = React.useMemo(() => {
     if (!searchQuery.trim()) return STATIONS;
@@ -157,6 +168,8 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       setUserLocation,
       fetchRoute,
       clearRoute,
+      locateUser,
+      registerLocateUser,
       getSelectionLabel,
     }),
     [
@@ -176,6 +189,8 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       clearPendingFlyTo,
       fetchRoute,
       clearRoute,
+      locateUser,
+      registerLocateUser,
       getSelectionLabel,
     ]
   );
