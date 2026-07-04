@@ -144,10 +144,10 @@ const MapLayers = React.memo(function MapLayers({
         ['get', 'lineColor2'],
         '#ffffff',
       ],
-      circleStrokeWidth: ['case', ['boolean', ['get', 'isInterchange'], false], 5, 2],
+      circleStrokeWidth: ['case', ['boolean', ['get', 'isInterchange'], false], 4, 1.5],
       circleRadius: selectedMetroId
-        ? ['case', ['==', ['get', 'id'], selectedMetroId], 0, 10]
-        : 10,
+        ? ['case', ['==', ['get', 'id'], selectedMetroId], 0, 8]
+        : 8,
       circleOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
       circleStrokeOpacity: ['case', ['==', ['get', 'isActive'], false], 0.55, 1],
     }),
@@ -236,7 +236,7 @@ const MapLayers = React.memo(function MapLayers({
           layout={layerVisibility(showBrt)}
           paint={{
             lineColor: ['get', 'color'],
-            lineWidth: 5,
+            lineWidth: 3,
             lineOpacity: 0.9,
             lineJoin: 'round',
             lineCap: 'round',
@@ -255,7 +255,7 @@ const MapLayers = React.memo(function MapLayers({
               markerStyles.pinLarge,
               { backgroundColor: selected.station.lineColor },
             ]}>
-            <TrainFrontIcon size={14} color="#ffffff" strokeWidth={2.5} />
+            <TrainFrontIcon size={12} color="#ffffff" strokeWidth={2.5} />
           </View>
         </MapMarker>
       )}
@@ -465,10 +465,10 @@ const styles = StyleSheet.create({
 
 const markerStyles = StyleSheet.create({
   pinLarge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 3,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2.5,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
