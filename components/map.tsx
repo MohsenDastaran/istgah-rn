@@ -25,6 +25,12 @@ import {
 } from 'react';
 import { CircleArrowUp, LocateFixed, Minus, Plus } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useUniwind } from 'uniwind';
 
 type MapContextValue = {
@@ -318,6 +324,25 @@ function MapControls({
   const cardStyle = [controlStyles.card, isDark ? controlStyles.cardDark : controlStyles.cardLight];
   const dividerStyle = isDark ? controlStyles.dividerDark : controlStyles.dividerLight;
   const iconColor = isDark ? '#e2e8f0' : '#334155';
+  const isNorth = Math.abs(bearing) < 1 || Math.abs(bearing - 360) < 1;
+  const compassOpacity = useSharedValue(isNorth ? 0 : 1);
+
+  useEffect(() => {
+    compassOpacity.value = withTiming(isNorth ? 0 : 1, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [isNorth, compassOpacity]);
+
+  const compassFadeStyle = useAnimatedStyle(() => {
+    const v = compassOpacity.value;
+    return {
+      opacity: v,
+      maxHeight: v * 52,
+      marginBottom: v * 8,
+      overflow: 'hidden' as const,
+    };
+  });
 
   const handleResetNorth = () => {
     cameraRef.current?.setStop({ bearing: 0, duration: 300 });
@@ -325,8 +350,10 @@ function MapControls({
 
   return (
     <View style={[controlStyles.container, positionStyle]} className={className}>
-      {/* Compass — always visible; rotates with the map, tap to snap north */}
-      <View style={cardStyle}>
+      {/* Compass — fades in when map is rotated off north; tap to reset */}
+      <Animated.View
+        style={[cardStyle, compassFadeStyle]}
+        pointerEvents={isNorth ? 'none' : 'auto'}>
         <ControlButton onPress={handleResetNorth} label="Reset north" isDark={isDark}>
           <View
             style={{
@@ -339,7 +366,7 @@ function MapControls({
             <CircleArrowUp size={20} color={iconColor} strokeWidth={2} />
           </View>
         </ControlButton>
-      </View>
+      </Animated.View>
 
       {showZoom && (
         <View style={cardStyle}>
