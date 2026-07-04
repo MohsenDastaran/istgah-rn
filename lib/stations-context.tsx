@@ -1,6 +1,9 @@
 import * as React from 'react';
+import { Dimensions } from 'react-native';
 import type { BusStop } from './bus-stops';
 import { STATIONS, type Station } from './stations';
+
+const DETAIL_SHEET_HEIGHT_FRACTION = 0.5;
 
 export type MapSelection =
   | { kind: 'metro'; station: Station }
@@ -36,7 +39,7 @@ type StationsContextValue = {
   selectItem: (item: MapSelection | null, options?: { flyTo?: boolean }) => void;
   /** @deprecated Use selectItem — kept for backward compatibility. */
   selectStation: (station: Station | null, options?: { flyTo?: boolean }) => void;
-  pendingFlyTo: [number, number] | null;
+  pendingFlyTo: { center: [number, number]; paddingBottom: number } | null;
   clearPendingFlyTo: () => void;
   setUserLocation: (coords: [number, number] | null) => void;
   fetchRoute: () => Promise<void>;
@@ -56,7 +59,10 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
   const [routeDuration, setRouteDuration] = React.useState<number | null>(null);
   const [routeLoading, setRouteLoading] = React.useState(false);
   const [userLocation, setUserLocation] = React.useState<[number, number] | null>(null);
-  const [pendingFlyTo, setPendingFlyTo] = React.useState<[number, number] | null>(null);
+  const [pendingFlyTo, setPendingFlyTo] = React.useState<{
+    center: [number, number];
+    paddingBottom: number;
+  } | null>(null);
   const locateUserRef = React.useRef<(() => Promise<void>) | null>(null);
 
   const registerLocateUser = React.useCallback((handler: (() => Promise<void>) | null) => {
@@ -83,7 +89,11 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
     (item: MapSelection | null, options?: { flyTo?: boolean }) => {
       setSelected(item);
       if (options?.flyTo && item) {
-        setPendingFlyTo(selectionCoordinates(item));
+        const { height } = Dimensions.get('window');
+        setPendingFlyTo({
+          center: selectionCoordinates(item),
+          paddingBottom: Math.round(height * DETAIL_SHEET_HEIGHT_FRACTION),
+        });
       }
       if (!item) {
         setRoute(null);

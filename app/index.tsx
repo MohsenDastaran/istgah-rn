@@ -1,5 +1,7 @@
 import { useCity } from '@/lib/city-context';
+import { flyToCoordinate } from '@/lib/map-camera';
 import { useMapLayers } from '@/lib/map-layers-context';
+import { useSheetDetent } from '@/lib/sheet-detent-context';
 import { useStations, type MapSelection } from '@/lib/stations-context';
 import { TEHRAN_BRT_LINES_GEOJSON } from '@/lib/brt-lines';
 import {
@@ -316,10 +318,8 @@ function MapContent() {
 
   React.useEffect(() => {
     if (!pendingFlyTo || !cameraRef.current) return;
-    cameraRef.current.flyTo({
-      center: pendingFlyTo,
-      zoom: 14,
-      duration: 1500,
+    flyToCoordinate(cameraRef.current, pendingFlyTo.center, {
+      mapPaddingBottom: pendingFlyTo.paddingBottom,
     });
     clearPendingFlyTo();
   }, [pendingFlyTo, clearPendingFlyTo, cameraRef]);
@@ -351,6 +351,7 @@ function MapControlsOverlay() {
   if (!mapComponents) return null;
   const { MapControls, useMap, useCurrentPosition } = mapComponents;
   const { setUserLocation, registerLocateUser } = useStations();
+  const { mapPaddingBottom } = useSheetDetent();
   const { cameraRef } = useMap();
   const [hasPermission, setHasPermission] = React.useState(false);
 
@@ -368,16 +369,14 @@ function MapControlsOverlay() {
       const coords = position?.coords
         ? { longitude: position.coords.longitude, latitude: position.coords.latitude }
         : await Location.getCurrentPositionAsync({}).then((l) => l.coords);
-      cameraRef.current.flyTo({
-        center: [coords.longitude, coords.latitude],
-        zoom: 14,
-        duration: 1500,
+      flyToCoordinate(cameraRef.current, [coords.longitude, coords.latitude], {
+        mapPaddingBottom,
       });
       setUserLocation([coords.longitude, coords.latitude]);
     } catch (error) {
       console.error('Location error:', error);
     }
-  }, [cameraRef, position, setUserLocation]);
+  }, [cameraRef, position, setUserLocation, mapPaddingBottom]);
 
   React.useEffect(() => {
     registerLocateUser(handleLocate);

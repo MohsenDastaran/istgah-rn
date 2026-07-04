@@ -12,6 +12,7 @@ import {
 import { useCity } from '@/lib/city-context';
 import { useI18n } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
+import { sheetDetentFraction, useSheetDetent } from '@/lib/sheet-detent-context';
 import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
@@ -720,6 +721,7 @@ const SheetSectionInner = () => {
   const { t, isRTL } = useI18n();
   const { city } = useCity();
   const { isSheetVisible, isSheetLoading } = useMapLayers();
+  const { setMapPaddingBottom } = useSheetDetent();
   const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
 
   const cityLabel = isRTL ? city.name.fa : city.name.en;
@@ -784,6 +786,27 @@ const SheetSectionInner = () => {
 
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
+  const peekFraction = minHeight / height;
+
+  const syncMapPadding = React.useCallback(
+    (detentIndex: number) => {
+      const fraction = sheetDetentFraction(detentIndex, peekFraction);
+      setMapPaddingBottom(Math.round(height * fraction));
+    },
+    [height, peekFraction, setMapPaddingBottom]
+  );
+
+  const handleDetentChange = React.useCallback(
+    (index: number) => {
+      setCurrentDetent(index);
+      syncMapPadding(index);
+    },
+    [syncMapPadding]
+  );
+
+  React.useEffect(() => {
+    syncMapPadding(currentDetent);
+  }, [currentDetent, syncMapPadding]);
 
   const selectedKey = selected
     ? selected.kind === 'metro'
@@ -794,9 +817,10 @@ const SheetSectionInner = () => {
   // Expand only when the user picks a station — not when they collapse to peek (e.g. locate).
   React.useEffect(() => {
     if (selectedKey) {
+      handleDetentChange(1);
       sheetRef.current?.resize(1);
     }
-  }, [selectedKey]);
+  }, [selectedKey, handleDetentChange]);
 
   // ── Floating close button ────────────────────────────────────────────────────
   const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
@@ -899,7 +923,7 @@ const SheetSectionInner = () => {
         style={contentStyle}
         detached
         backgroundColor={DARK}
-        onDetentChange={(e) => setCurrentDetent(e.nativeEvent.index)}
+        onDetentChange={(e) => handleDetentChange(e.nativeEvent.index)}
         header={
           <SheetHeader
             placeholder={t.search}
