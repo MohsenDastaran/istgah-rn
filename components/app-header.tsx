@@ -1,7 +1,8 @@
 import { SettingsPanel } from '@/components/settings-panel';
 import { StationLayerToggle } from '@/components/station-layer-toggle';
+import { Text } from '@/components/ui/text';
 import { useI18n } from '@/lib/i18n';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HEADER_HEIGHT = 44;
@@ -13,8 +14,11 @@ export function AppHeader() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
-        <View style={styles.side}>
-          <Text style={styles.title} numberOfLines={1}>
+        <View style={styles.side} pointerEvents="box-none">
+          <Text
+            className="text-foreground text-[17px] font-bold"
+            numberOfLines={1}
+            style={styles.title}>
             {t.headerTitle}
           </Text>
         </View>
@@ -23,7 +27,7 @@ export function AppHeader() {
           <StationLayerToggle />
         </View>
 
-        <View style={[styles.side, styles.sideEnd]}>
+        <View style={[styles.side, styles.sideEnd]} pointerEvents="box-none">
           <SettingsPanel />
         </View>
       </View>
@@ -52,17 +56,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   center: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 0,
-    // Let taps pass through the empty overlay area to the map.
+    zIndex: 2,
     pointerEvents: 'box-none',
   },
   title: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
     letterSpacing: Platform.select({ ios: -0.3, default: 0 }),
   },
 });
