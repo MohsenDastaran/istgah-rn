@@ -1,5 +1,4 @@
 import { useCity } from '@/lib/city-context';
-import { useI18n } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { useStations, type MapSelection } from '@/lib/stations-context';
 import { TEHRAN_BRT_LINES_GEOJSON } from '@/lib/brt-lines';
@@ -9,8 +8,7 @@ import {
   getBusStopById,
 } from '@/lib/bus-stops';
 import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON } from '@/lib/stations';
-import { SettingsPanel } from '@/components/settings-panel';
-import { StationLayerToggle } from '@/components/station-layer-toggle';
+import { AppHeader } from '@/components/app-header';
 import { Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { Bus, TrainFrontIcon } from 'lucide-react-native';
@@ -403,25 +401,15 @@ function MapWithStations() {
   );
 }
 
-function ScreenHeaderTitle() {
-  const { t } = useI18n();
-  return (
-    <View style={headerStyles.titleRow}>
-      <Text style={headerStyles.titleText}>{t.headerTitle}</Text>
-      <StationLayerToggle />
-    </View>
-  );
-}
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function Screen() {
   return (
     <>
       <Stack.Screen
         options={{
-          headerTitle: () => <ScreenHeaderTitle />,
+          header: () => <AppHeader />,
           headerTransparent: true,
-          headerRight: () => <SettingsPanel />,
+          headerShadowVisible: false,
         }}
       />
       <View className="flex-1">
@@ -439,20 +427,6 @@ export default function Screen() {
     </>
   );
 }
-
-const headerStyles = StyleSheet.create({
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flexShrink: 1,
-  },
-  titleText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-});
 
 const styles = StyleSheet.create({
   mapFallback: {

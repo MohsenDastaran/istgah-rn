@@ -231,9 +231,9 @@ export function SettingsPanel() {
         <Button
           variant="ghost"
           size="icon"
-          className="ios:size-9 web:mx-4 rounded-full"
+          className="size-9 rounded-full active:bg-white/10"
           accessibilityLabel="Settings">
-          <Icon as={Settings} className="size-5" />
+          <Icon as={Settings} className="size-[22px] text-white" />
         </Button>
       </PopoverTrigger>
 
