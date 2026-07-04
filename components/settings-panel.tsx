@@ -137,7 +137,6 @@ const ABOUT_FEATURE_KEYS = [
   'aboutFeatureRouting',
   'aboutFeatureI18n',
   'aboutFeatureTheme',
-  'aboutFeatureOffline',
 ] as const;
 
 function AboutDialog() {
@@ -237,7 +236,7 @@ export function SettingsPanel() {
         <Button
           variant="ghost"
           size="icon"
-          className="size-9 rounded-full active:bg-foreground/10"
+          className="active:bg-foreground/10 size-9 rounded-full"
           accessibilityLabel={t.settings}>
           <Icon as={Settings} className="text-foreground size-[22px]" />
         </Button>
