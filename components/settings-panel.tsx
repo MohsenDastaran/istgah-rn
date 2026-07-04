@@ -121,7 +121,7 @@ function ReportIssueDialog() {
           </DialogClose>
           <Button
             onPress={() => {
-              Linking.openURL('https://github.com/MohsenDastaran/istgah-rn/issues');
+              Linking.openURL('https://github.com/MohsenDastaran/istgah-rn/issues/new');
               setOpen(false);
             }}>
             <Icon as={ExternalLink} className="text-primary-foreground size-4" />
