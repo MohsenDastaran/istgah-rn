@@ -10,18 +10,18 @@ const COMPACT_WIDTH = 390;
 
 export function AppHeader() {
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const { width } = useWindowDimensions();
   const compact = width < COMPACT_WIDTH;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={[styles.bar, compact && styles.barCompact]}>
-        <View style={styles.side} pointerEvents="box-none">
+      <View style={[styles.bar, compact && styles.barCompact, isRTL && styles.barRTL]}>
+        <View style={styles.sideLeading} pointerEvents="box-none">
           <Text
             className={`text-foreground font-bold ${compact ? 'text-[15px]' : 'text-[17px]'}`}
             numberOfLines={1}
-            style={styles.title}>
+            style={[styles.title, isRTL && styles.titleRTL]}>
             {t.headerTitle}
           </Text>
         </View>
@@ -30,7 +30,7 @@ export function AppHeader() {
           <StationLayerToggle />
         </View>
 
-        <View style={[styles.side, styles.sideEnd]} pointerEvents="box-none">
+        <View style={styles.sideTrailing} pointerEvents="box-none">
           <SettingsPanel />
         </View>
       </View>
@@ -54,15 +54,22 @@ const styles = StyleSheet.create({
   barCompact: {
     paddingHorizontal: 12,
   },
-  side: {
+  barRTL: {
+    direction: 'rtl',
+  },
+  sideLeading: {
     flex: 1,
     minWidth: 0,
     zIndex: 1,
     justifyContent: 'center',
+    alignItems: 'flex-start',
   },
-  sideEnd: {
+  sideTrailing: {
+    flex: 1,
+    minWidth: 0,
+    zIndex: 1,
+    justifyContent: 'center',
     alignItems: 'flex-end',
-    flexShrink: 0,
   },
   center: {
     ...StyleSheet.absoluteFill,
@@ -73,6 +80,11 @@ const styles = StyleSheet.create({
   },
   title: {
     flexShrink: 1,
+    maxWidth: '100%',
     letterSpacing: Platform.select({ ios: -0.3, default: 0 }),
+  },
+  titleRTL: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
 });
