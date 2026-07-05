@@ -130,8 +130,6 @@ function BasemapToggle({
                 'min-h-10 flex-1 flex-row items-center justify-center gap-1.5 px-2 py-2 active:opacity-80',
                 isFirst && 'rounded-l-lg',
                 isLast && 'rounded-r-lg',
-                isRTL && isFirst && 'rounded-l-none rounded-r-lg',
-                isRTL && isLast && 'rounded-l-lg rounded-r-none',
                 selected && 'bg-background shadow-sm'
               )}>
               <Icon
