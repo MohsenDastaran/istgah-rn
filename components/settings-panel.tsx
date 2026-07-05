@@ -11,6 +11,10 @@ import {
 } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useI18n, type Lang } from '@/lib/i18n';
+import type { CityId } from '@/lib/cities';
+import { CITIES, useCity, CITY_IDS } from '@/lib/city-context';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -22,15 +26,13 @@ import {
 } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import { useBasemap, type BasemapId } from '@/lib/basemap-context';
-import { useI18n, type Lang } from '@/lib/i18n';
-import type { CityId } from '@/lib/cities';
-import { CITIES, useCity, CITY_IDS } from '@/lib/city-context';
 import {
   CircleAlert,
   Code,
   ExternalLink,
   Globe,
   Info,
+  Map,
   MapPin,
   Palette,
   Satellite,
@@ -86,6 +88,65 @@ function FooterLinkTrigger({
       <Icon as={IconComp} className="text-muted-foreground size-4" />
       <Text className="text-muted-foreground text-sm">{label}</Text>
     </Pressable>
+  );
+}
+
+// ─── Basemap toggle (street / satellite) ─────────────────────────────────────
+const BASEMAP_OPTIONS: { id: BasemapId; icon: LucideIcon; labelKey: 'basemapStreet' | 'basemapSatellite' }[] =
+  [
+    { id: 'street', icon: Map, labelKey: 'basemapStreet' },
+    { id: 'satellite', icon: Satellite, labelKey: 'basemapSatellite' },
+  ];
+
+function BasemapToggle({
+  basemap,
+  onChange,
+}: {
+  basemap: BasemapId;
+  onChange: (id: BasemapId) => void;
+}) {
+  const { t, isRTL } = useI18n();
+
+  return (
+    <View className="gap-1.5">
+      <Text className="text-sm font-medium">{t.mapStyle}</Text>
+      <View className="bg-muted flex-row rounded-xl p-1 rtl:flex-row-reverse">
+        {BASEMAP_OPTIONS.map((opt, index) => {
+          const selected = basemap === opt.id;
+          const isFirst = index === 0;
+          const isLast = index === BASEMAP_OPTIONS.length - 1;
+
+          return (
+            <Pressable
+              key={opt.id}
+              onPress={() => onChange(opt.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={t[opt.labelKey]}
+              className={cn(
+                'min-h-10 flex-1 flex-row items-center justify-center gap-1.5 px-2 py-2 active:opacity-80',
+                isFirst && 'rounded-l-lg',
+                isLast && 'rounded-r-lg',
+                isRTL && isFirst && 'rounded-l-none rounded-r-lg',
+                isRTL && isLast && 'rounded-r-none rounded-l-lg',
+                selected && 'bg-background shadow-sm'
+              )}>
+              <Icon
+                as={opt.icon}
+                className={cn('size-4', selected ? 'text-foreground' : 'text-muted-foreground')}
+              />
+              <Text
+                className={cn(
+                  'text-xs font-semibold',
+                  selected ? 'text-foreground' : 'text-muted-foreground'
+                )}>
+                {t[opt.labelKey]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -224,11 +285,6 @@ export function SettingsPanel() {
     { value: 'dark', label: t.themeDark },
   ];
 
-  const basemapOptions: Option[] = [
-    { value: 'street', label: t.basemapStreet },
-    { value: 'satellite', label: t.basemapSatellite },
-  ];
-
   const cityOptions: Option[] = CITY_IDS.map((id) => ({
     value: id,
     label: CITIES[id].name[lang],
@@ -236,7 +292,6 @@ export function SettingsPanel() {
 
   const selectedLang = langOptions.find((o) => o.value === lang);
   const selectedTheme = themeOptions.find((o) => o.value === (theme ?? 'light'));
-  const selectedBasemap = basemapOptions.find((o) => o.value === basemap);
   const selectedCity = cityOptions.find((o) => o.value === cityId);
 
   return (
@@ -258,6 +313,10 @@ export function SettingsPanel() {
         align={isRTL ? 'start' : 'end'}>
         <View className="gap-4">
           <Text className="text-foreground text-base font-semibold">{t.settings}</Text>
+
+          <BasemapToggle basemap={basemap} onChange={setBasemap} />
+
+          <Divider />
 
           <SettingsRow icon={Globe} label={t.language}>
             <Select value={selectedLang} onValueChange={(opt) => opt && setLang(opt.value as Lang)}>
@@ -286,25 +345,6 @@ export function SettingsPanel() {
               <SelectContent insets={contentInsets} className="w-32">
                 <SelectGroup>
                   {themeOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} label={opt.label}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </SettingsRow>
-
-          <SettingsRow icon={Satellite} label={t.mapStyle}>
-            <Select
-              value={selectedBasemap}
-              onValueChange={(opt) => opt && setBasemap(opt.value as BasemapId)}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder={t.mapStyle} />
-              </SelectTrigger>
-              <SelectContent insets={contentInsets} className="w-32">
-                <SelectGroup>
-                  {basemapOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value} label={opt.label}>
                       {opt.label}
                     </SelectItem>
