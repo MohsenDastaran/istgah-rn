@@ -24,7 +24,15 @@ import {
   type ReactNode,
 } from 'react';
 import { CircleArrowUp, LocateFixed, Minus, Plus } from 'lucide-react-native';
-import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -458,6 +466,7 @@ const controlStyles = StyleSheet.create({
   container: {
     position: 'absolute',
     gap: 8,
+    marginBottom: 10,
   },
   card: {
     borderRadius: 14,
