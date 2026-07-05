@@ -161,7 +161,7 @@ function ToolbarTile({
       {loading ? (
         <ActivityIndicator size="small" color="#ffffff" />
       ) : (
-        <Icon as={icon} className="size-[18px]" />
+        <Icon as={icon} className="size-[18px] text-white" color="#ffffff" />
       )}
       <Text className="text-center text-xs leading-4 font-semibold text-white" numberOfLines={2}>
         {label}
@@ -199,7 +199,9 @@ const DetailToolbar = React.memo(function DetailToolbar({
         accessibilityRole="button"
         accessibilityLabel={t.backToList}
         className="flex-row items-center gap-1.5 self-start rounded-lg px-2 py-1.5 active:bg-white/10">
-        <Icon as={ArrowLeft} className={cn('size-4', isRTL && 'rotate-180')} />
+        <View className={cn(isRTL && 'rotate-180')}>
+          <Icon as={ArrowLeft} className={cn('size-4 text-white')} color="#ffffff" />
+        </View>
         <Text className="text-xs text-[#b2bac8]">{t.backToList}</Text>
       </Pressable>
 
