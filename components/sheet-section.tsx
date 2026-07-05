@@ -11,6 +11,7 @@ import { cityLabelFromName } from '@/lib/cities';
 import { useI18n, type Lang, type Strings } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { sheetDetentFraction, useSheetDetent } from '@/lib/sheet-detent-context';
+import { openBusArrivalUssd } from '@/lib/bus-arrival';
 import { openMapsDirections } from '@/lib/maps';
 import { useStations } from '@/lib/stations-context';
 import type { Station } from '@/lib/stations';
@@ -32,6 +33,7 @@ import {
   Car,
   ExternalLink,
   MapPin,
+  Phone,
   RouteOff,
   TrainFront,
   X,
@@ -694,6 +696,12 @@ const BusStopDetail = React.memo(function BusStopDetail({
     openMapsDirections(lat, lng, displayName);
   };
 
+  const handleBusArrival = () => {
+    void openBusArrivalUssd(stop.stationCode).catch((error) => {
+      console.error('Failed to open bus arrival USSD', error);
+    });
+  };
+
   return (
     <View className="gap-2.5">
       <DetailToolbar
@@ -734,6 +742,25 @@ const BusStopDetail = React.memo(function BusStopDetail({
       ) : null}
 
       <BusAmenities stop={stop} lang={lang} />
+
+      {stop.stationCode.trim() ? (
+        <Pressable
+          onPress={handleBusArrival}
+          accessibilityRole="button"
+          accessibilityLabel={`${isBRT ? t.nextArrivalBrt : t.nextArrivalBus}, ${t.nextArrivalHint}`}
+          className={cn(
+            'flex-row items-center justify-center gap-2 rounded-xl px-4 py-3 active:opacity-70',
+            isBRT ? 'bg-orange-500/20' : 'bg-slate-500/25'
+          )}>
+          <Icon as={Phone} className="size-[18px] text-white" color="#ffffff" />
+          <View className="min-w-0 flex-1 items-center">
+            <Text className="text-center text-sm font-semibold text-white">
+              {isBRT ? t.nextArrivalBrt : t.nextArrivalBus}
+            </Text>
+            <Text className="text-center text-[11px] leading-4 text-[#b2bac8]">{t.nextArrivalHint}</Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       <View className="gap-2 rounded-xl bg-white/5 p-2.5">
         <InfoRow label={t.busLines} value={stop.lines} />

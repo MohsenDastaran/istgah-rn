@@ -40,6 +40,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "^56",
+    "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.18",
     "expo-haptics": "~56.0.3",
     "expo-linking": "~56.0.14",
