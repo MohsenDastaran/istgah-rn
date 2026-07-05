@@ -13,7 +13,7 @@ const LANG_STORAGE_KEY = '@istgah/lang';
 const translations = {
   en: {
     appName: 'Istgah',
-    search: 'Search...',
+    search: 'Search Stations and Places...',
     english: 'English',
     persian: 'Persian',
     expand: 'Expand',
@@ -91,7 +91,7 @@ const translations = {
     layerPlace: 'Place',
     noPlacesFound: 'No places found',
     placeSearchHint: 'Search for addresses and landmarks',
-    transitColumn: 'Transit',
+    transitColumn: 'Transit Stations',
     km: 'km',
     min: 'min',
     openSettings: 'Open Settings',
@@ -104,7 +104,7 @@ const translations = {
   },
   fa: {
     appName: 'ایستگاه',
-    search: 'جستجو...',
+    search: 'جستجوی ایستگاه‌ها و مکان‌ها...',
     english: 'انگلیسی',
     persian: 'فارسی',
     expand: 'گسترش',
@@ -183,7 +183,7 @@ const translations = {
     layerPlace: 'مکان',
     noPlacesFound: 'مکانی یافت نشد',
     placeSearchHint: 'جستجوی آدرس و مکان',
-    transitColumn: 'حمل‌ونقل',
+    transitColumn: 'ایستگاه‌های حمل‌ونقل عمومی ',
     km: 'کیلومتر',
     min: 'دقیقه',
     openSettings: 'باز کردن تنظیمات',
