@@ -7,7 +7,9 @@
     "icon": "./assets/images/istgah-logo.png",
     "scheme": "istgah",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mohsendastaran.istgah"
@@ -18,7 +20,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.mohsendastaran.istgah",
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -43,6 +48,13 @@
     "experiments": {
       "typedRoutes": true
     },
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "71d8e51b-cecb-44f8-b797-c7775db334fc"
+      }
+    },
+    "owner": "mohsendastarans-team"
   }
 }
