@@ -13,7 +13,7 @@ import {
 import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON } from '@/lib/stations';
 import { AppHeader } from '@/components/app-header';
 import { Stack } from 'expo-router';
-import { Bus, TrainFrontIcon } from 'lucide-react-native';
+import { Bus, MapPin, TrainFrontIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { StyleSheet, Text, TurboModuleRegistry, View, ActivityIndicator } from 'react-native';
 
@@ -278,6 +278,14 @@ const MapLayers = React.memo(function MapLayers({
           </View>
         </MapMarker>
       )}
+
+      {selected?.kind === 'place' && (
+        <MapMarker coordinate={selected.place.coordinate}>
+          <View style={markerStyles.pinPlace}>
+            <MapPin size={11} color="#ffffff" strokeWidth={2.5} />
+          </View>
+        </MapMarker>
+      )}
     </>
   );
 });
@@ -521,5 +529,16 @@ const markerStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
+  },
+  pinPlace: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    backgroundColor: '#a78bfa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
   },
 });

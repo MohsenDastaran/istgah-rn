@@ -19,11 +19,14 @@ import {
   listBrtStops,
   searchBusStops,
 } from '@/lib/bus-stops';
+import type { PlaceResult } from '@/lib/geocoding';
+import { usePlaceSearch } from '@/lib/use-place-search';
 import {
   ArrowLeft,
   Bus,
   Car,
   ExternalLink,
+  MapPin,
   RouteOff,
   TrainFront,
   X,
@@ -342,10 +345,12 @@ const CategoryHeader = React.memo(function CategoryHeader({
   label,
   icon: IconComp,
   color,
+  loading,
 }: {
   label: string;
   icon: LucideIcon;
   color: string;
+  loading?: boolean;
 }) {
   return (
     <View className="mb-0.5 flex-row items-center gap-1.5 border-b border-white/10 px-0.5 py-2 rtl:flex-row-reverse">
@@ -353,6 +358,9 @@ const CategoryHeader = React.memo(function CategoryHeader({
       <Text className="text-[11px] font-semibold tracking-wide uppercase" style={{ color }}>
         {label}
       </Text>
+      {loading ? (
+        <ActivityIndicator size="small" color={color} style={{ marginLeft: 4, opacity: 0.7 }} />
+      ) : null}
     </View>
   );
 });
@@ -361,6 +369,7 @@ const TYPE_META = {
   metro: { Icon: TrainFront, color: '#60a5fa' },
   brt: { Icon: Bus, color: '#fb923c' },
   bus: { Icon: Bus, color: '#94a3b8' },
+  place: { Icon: MapPin, color: '#a78bfa' },
 } as const;
 
 type RowTypeKind = keyof typeof TYPE_META;
@@ -483,6 +492,56 @@ const BusRow = React.memo(function BusRow({
       dotColor={dotColor}
       onPress={onPress}
     />
+  );
+});
+
+// ─── Place row ────────────────────────────────────────────────────────────────
+const PlaceRow = React.memo(function PlaceRow({
+  place,
+  cityLabel,
+  typeLabel,
+  onPress,
+}: {
+  place: PlaceResult;
+  cityLabel: string;
+  typeLabel: string;
+  onPress: () => void;
+}) {
+  const { Icon: TypeIcon, color: typeColor } = TYPE_META.place;
+  const detail = place.displayName.split(',').slice(1, 3).join(',').trim();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      className="h-[52px] justify-center border-b border-white/10 active:opacity-60">
+      <View className="flex-row items-center gap-3 rtl:flex-row-reverse">
+        <View
+          className="size-[11px] shrink-0 rounded-sm"
+          style={{ backgroundColor: '#a78bfa' }}
+        />
+        <View className="min-w-0 flex-1 rtl:items-end">
+          <Text className="text-sm font-medium text-white" numberOfLines={1}>
+            {place.name}
+          </Text>
+          {detail ? (
+            <Text className="mt-px text-xs text-[#b2bac8]" numberOfLines={1}>
+              {detail}
+            </Text>
+          ) : null}
+        </View>
+        <View className="max-w-[38%] shrink-0 items-end gap-0.5 rtl:items-start">
+          <View className="flex-row items-center gap-1 rtl:flex-row-reverse">
+            <TypeIcon size={12} color={typeColor} strokeWidth={2.5} />
+            <Text className="text-[11px] font-semibold" style={{ color: typeColor }} numberOfLines={1}>
+              {typeLabel}
+            </Text>
+          </View>
+          <Text className="text-[11px] text-[#b2bac8]" numberOfLines={1}>
+            {cityLabel}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
   );
 });
 
@@ -683,15 +742,85 @@ const BusStopDetail = React.memo(function BusStopDetail({
   );
 });
 
+// ─── Place detail ─────────────────────────────────────────────────────────────
+const PlaceDetail = React.memo(function PlaceDetail({
+  place,
+  sheetRef,
+  onBackToList,
+}: {
+  place: PlaceResult;
+  sheetRef: React.RefObject<TrueSheet | null>;
+  onBackToList: () => void;
+}) {
+  const { t } = useI18n();
+  const { route, routeDistance, routeDuration, routeLoading, userLocation, fetchRoute, clearRoute, locateUser } = useStations();
+
+  const handleDirections = async () => {
+    await fetchRoute();
+    sheetRef.current?.resize(1);
+  };
+
+  const handlePrimaryPress = async () => {
+    if (!userLocation) {
+      sheetRef.current?.resize(0);
+      await locateUser();
+      return;
+    }
+    await handleDirections();
+  };
+
+  const handleOpenMaps = () => {
+    const [lng, lat] = place.coordinate;
+    openMapsDirections(lat, lng, place.name);
+  };
+
+  return (
+    <View className="gap-2.5">
+      <DetailToolbar
+        onBackToList={onBackToList}
+        onOpenMaps={handleOpenMaps}
+        onPrimaryPress={handlePrimaryPress}
+        onClearRoute={clearRoute}
+        route={!!route}
+        routeLoading={routeLoading}
+      />
+
+      {!userLocation && !route ? (
+        <Text className="text-center text-[11px] text-[#b2bac8]">{t.locateYourselfFirst}</Text>
+      ) : null}
+
+      {route && routeDistance != null && routeDuration != null ? (
+        <RouteInfoBar
+          distance={routeDistance}
+          duration={routeDuration}
+          distanceLabel={t.distance}
+          durationLabel={t.duration}
+          kmUnit={t.km}
+          minUnit={t.min}
+        />
+      ) : null}
+
+      <DetailHeader
+        title={place.name}
+        subtitle={t.layerPlace}
+        dotColor="#a78bfa"
+        dotSizeClass="size-3.5 rounded-sm"
+      />
+
+      <View className="gap-2 rounded-xl bg-white/5 p-2.5">
+        <InfoRow label={t.address} value={place.displayName} />
+      </View>
+    </View>
+  );
+});
+
 // ─── Search results (categorised) ────────────────────────────────────────────
 type ListItem =
   | { kind: 'metro'; station: Station }
   | { kind: 'brt'; stop: BusStop }
   | { kind: 'bus'; stop: BusStop };
 
-type Section = SectionListData<ListItem, { title: string; icon: LucideIcon; color: string }>;
-
-const DEBOUNCE_MS = 300;
+type Section = SectionListData<ListItem, { title: string; icon: LucideIcon; color: string; loading?: boolean }>;
 
 // ─── Inner ────────────────────────────────────────────────────────────────────
 const SheetSectionInner = () => {
@@ -701,44 +830,32 @@ const SheetSectionInner = () => {
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
   const { t, lang, isRTL } = useI18n();
-  const { city } = useCity();
+  const { city, cityId } = useCity();
   const { isSheetVisible, isSheetLoading } = useMapLayers();
   const { setMapPaddingBottom } = useSheetDetent();
   const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
 
   const cityLabel = city.name[lang];
 
-  // ── Debounced query ──────────────────────────────────────────────────────────
-  const [debouncedQuery, setDebouncedQuery] = React.useState('');
-  const [isSearching, setIsSearching] = React.useState(false);
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  // ── Search change (stations filter is instant; places use usePlaceSearch debounce) ──
   const handleSearchChange = React.useCallback(
     (text: string) => {
       setSearchQuery(text);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (text.trim().length > 0) {
-        setIsSearching(true);
-        debounceRef.current = setTimeout(() => {
-          setDebouncedQuery(text);
-          setIsSearching(false);
-        }, DEBOUNCE_MS);
-      } else {
-        setDebouncedQuery('');
-        setIsSearching(false);
-      }
     },
     [setSearchQuery]
   );
 
-  // ── Bus stop search results ──────────────────────────────────────────────────
+  // ── Place search (debounced + aborted in the hook) ───────────────────────────
+  const { places, isPlaceLoading } = usePlaceSearch(searchQuery, cityId, lang);
+
+  // ── Bus stop search results (instant local filter) ───────────────────────────
   const busResults = React.useMemo(
-    () => (debouncedQuery.length >= 2 ? searchBusStops(debouncedQuery) : { brt: [], bus: [] }),
-    [debouncedQuery]
+    () => (searchQuery.trim().length >= 2 ? searchBusStops(searchQuery) : { brt: [], bus: [] }),
+    [searchQuery]
   );
 
   // ── Section data ─────────────────────────────────────────────────────────────
-  const hasQuery = debouncedQuery.trim().length > 0 || isSearching;
+  const hasQuery = searchQuery.trim().length > 0;
 
   const metroItems = React.useMemo((): ListItem[] => {
     if (!isSheetVisible('metro')) return [];
@@ -816,7 +933,9 @@ const SheetSectionInner = () => {
   const selectedKey = selected
     ? selected.kind === 'metro'
       ? `metro-${selected.station.id}`
-      : `${selected.kind}-${selected.stop.id}`
+      : selected.kind === 'place'
+        ? `place-${selected.place.id}`
+        : `${selected.kind}-${selected.stop.id}`
     : null;
 
   // Expand only when the user picks a station — not when they collapse to peek (e.g. locate).
@@ -859,16 +978,18 @@ const SheetSectionInner = () => {
   const handleBackToList = React.useCallback(() => {
     selectItem(null);
     setSearchQuery('');
-    setDebouncedQuery('');
-    setIsSearching(false);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
     sheetRef.current?.resize(1);
   }, [selectItem, setSearchQuery]);
+
+  const handlePlacePress = React.useCallback(
+    (place: PlaceResult) => selectItem({ kind: 'place', place }, { flyTo: true }),
+    [selectItem]
+  );
 
   // ── Renderers ────────────────────────────────────────────────────────────────
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: Section }) => (
-      <CategoryHeader label={section.title} icon={section.icon} color={section.color} />
+      <CategoryHeader label={section.title} icon={section.icon} color={section.color} loading={section.loading} />
     ),
     []
   );
@@ -911,7 +1032,14 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && styles.contentRTL];
 
-  const showStationList = !selected && !isSearching && !isSheetLoading && sections.length > 0;
+  // Show the scrollable station list only when nothing is selected and the sheet isn't transitioning
+  const showStationList = !selected && !isSheetLoading && (sections.length > 0 || hasQuery);
+
+  // Places section is shown inline below station sections when a query is active
+  const showPlacesSection = hasQuery && !selected && !isSheetLoading;
+
+  const isListEmpty =
+    !selected && !isSheetLoading && sections.length === 0 && !isPlaceLoading && places.length === 0;
 
   return (
     <>
@@ -953,11 +1081,17 @@ const SheetSectionInner = () => {
             sheetRef={sheetRef}
             onBackToList={handleBackToList}
           />
-        ) : isSearching || isSheetLoading ? (
+        ) : selected?.kind === 'place' ? (
+          <PlaceDetail
+            place={selected.place}
+            sheetRef={sheetRef}
+            onBackToList={handleBackToList}
+          />
+        ) : isSheetLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="small" color={GRAY} />
           </View>
-        ) : sections.length === 0 ? (
+        ) : isListEmpty ? (
           <ListEmptyFallback
             title={hasQuery ? t.noResults : t.emptyListTitle}
             hint={hasQuery ? t.noResultsHint : t.emptyListHint}
@@ -980,6 +1114,28 @@ const SheetSectionInner = () => {
             extraData={lang}
             style={styles.list}
             contentContainerStyle={[styles.listContent, { paddingBottom: SPACING + insets.bottom }]}
+            ListFooterComponent={showPlacesSection ? (
+              <View>
+                <CategoryHeader
+                  label={t.places}
+                  icon={MapPin}
+                  color="#a78bfa"
+                  loading={isPlaceLoading}
+                />
+                {places.map((place) => (
+                  <PlaceRow
+                    key={place.id}
+                    place={place}
+                    cityLabel={cityLabel}
+                    typeLabel={t.layerPlace}
+                    onPress={() => handlePlacePress(place)}
+                  />
+                ))}
+                {!isPlaceLoading && places.length === 0 ? (
+                  <Text className="px-2 py-3 text-[12px] text-[#b2bac8]">{t.noPlacesFound}</Text>
+                ) : null}
+              </View>
+            ) : null}
           />
         )}
       </ReanimatedTrueSheet>

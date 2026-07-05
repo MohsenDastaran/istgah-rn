@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Dimensions } from 'react-native';
 import type { BusStop } from './bus-stops';
+import type { PlaceResult } from './geocoding';
 import { STATIONS, type Station } from './stations';
 
 const DETAIL_SHEET_HEIGHT_FRACTION = 0.5;
@@ -8,16 +9,20 @@ const DETAIL_SHEET_HEIGHT_FRACTION = 0.5;
 export type MapSelection =
   | { kind: 'metro'; station: Station }
   | { kind: 'brt'; stop: BusStop }
-  | { kind: 'bus'; stop: BusStop };
+  | { kind: 'bus'; stop: BusStop }
+  | { kind: 'place'; place: PlaceResult };
 
 function selectionCoordinates(sel: MapSelection): [number, number] {
-  return sel.kind === 'metro' ? sel.station.coordinates : sel.stop.coordinate;
+  if (sel.kind === 'metro') return sel.station.coordinates;
+  if (sel.kind === 'place') return sel.place.coordinate;
+  return sel.stop.coordinate;
 }
 
 function selectionLabel(sel: MapSelection, isRTL: boolean): string {
   if (sel.kind === 'metro') {
     return isRTL ? sel.station.name.fa : sel.station.name.en;
   }
+  if (sel.kind === 'place') return sel.place.name;
   if (isRTL || !sel.stop.latinName) return sel.stop.name;
   return sel.stop.latinName;
 }

@@ -5,6 +5,8 @@ export type City = {
   name: { en: string; fa: string };
   center: [number, number];
   zoom: number;
+  /** Nominatim viewbox: [lon_min, lat_max, lon_max, lat_min] */
+  bbox: [number, number, number, number];
 };
 
 export const CITIES: Record<CityId, City> = {
@@ -13,36 +15,42 @@ export const CITIES: Record<CityId, City> = {
     name: { en: 'Tehran', fa: 'تهران' },
     center: [51.39, 35.72],
     zoom: 12,
+    bbox: [51.1, 35.85, 51.75, 35.55],
   },
   isfahan: {
     id: 'isfahan',
     name: { en: 'Isfahan', fa: 'اصفهان' },
     center: [51.67, 32.65],
     zoom: 12,
+    bbox: [51.5, 32.85, 51.85, 32.5],
   },
   mashhad: {
     id: 'mashhad',
     name: { en: 'Mashhad', fa: 'مشهد' },
     center: [59.61, 36.3],
     zoom: 12,
+    bbox: [59.4, 36.45, 59.75, 36.2],
   },
   tabriz: {
     id: 'tabriz',
     name: { en: 'Tabriz', fa: 'تبریز' },
     center: [46.29, 38.08],
     zoom: 12,
+    bbox: [46.1, 38.2, 46.45, 37.95],
   },
   karaj: {
     id: 'karaj',
     name: { en: 'Karaj', fa: 'کرج' },
     center: [50.99, 35.84],
     zoom: 12,
+    bbox: [50.8, 35.95, 51.15, 35.7],
   },
   shiraz: {
     id: 'shiraz',
     name: { en: 'Shiraz', fa: 'شیراز' },
     center: [52.53, 29.59],
     zoom: 12,
+    bbox: [52.35, 29.75, 52.65, 29.5],
   },
 };
 
