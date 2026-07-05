@@ -39,6 +39,14 @@ function mapRawStation(s: RawStation): Station {
 
 export const STATIONS: Station[] = rawStations.map(mapRawStation);
 
+export function filterStationsByQuery(query: string): Station[] {
+  if (!query.trim()) return STATIONS;
+  const q = query.toLowerCase();
+  return STATIONS.filter(
+    (s) => s.name.en.toLowerCase().includes(q) || s.name.fa.includes(query)
+  );
+}
+
 /** Stations that sit on two or more lines — rendered with split-colour markers. */
 export const INTERCHANGE_STATIONS: Station[] = STATIONS.filter((s) => s.lineKey.includes(','));
 

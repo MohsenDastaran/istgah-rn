@@ -29,18 +29,15 @@ function selectionLabel(sel: MapSelection, isRTL: boolean): string {
 
 type StationsContextValue = {
   stations: Station[];
-  filteredStations: Station[];
   /** Unified map/sheet selection (metro, BRT, or bus). */
   selected: MapSelection | null;
   /** Convenience alias — non-null only when a metro station is selected. */
   selectedStation: Station | null;
-  searchQuery: string;
   route: [number, number][] | null;
   routeDistance: number | null;
   routeDuration: number | null;
   routeLoading: boolean;
   userLocation: [number, number] | null;
-  setSearchQuery: (q: string) => void;
   selectItem: (item: MapSelection | null, options?: { flyTo?: boolean }) => void;
   /** @deprecated Use selectItem — kept for backward compatibility. */
   selectStation: (station: Station | null, options?: { flyTo?: boolean }) => void;
@@ -58,7 +55,6 @@ const StationsContext = React.createContext<StationsContextValue | null>(null);
 
 export function StationsProvider({ children }: { children: React.ReactNode }) {
   const [selected, setSelected] = React.useState<MapSelection | null>(null);
-  const [searchQuery, setSearchQueryState] = React.useState('');
   const [route, setRoute] = React.useState<[number, number][] | null>(null);
   const [routeDistance, setRouteDistance] = React.useState<number | null>(null);
   const [routeDuration, setRouteDuration] = React.useState<number | null>(null);
@@ -78,18 +74,6 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
 
   const locateUser = React.useCallback(async () => {
     await locateUserRef.current?.();
-  }, []);
-
-  const filteredStations = React.useMemo(() => {
-    if (!searchQuery.trim()) return STATIONS;
-    const q = searchQuery.toLowerCase();
-    return STATIONS.filter(
-      (s) => s.name.en.toLowerCase().includes(q) || s.name.fa.includes(searchQuery)
-    );
-  }, [searchQuery]);
-
-  const setSearchQuery = React.useCallback((q: string) => {
-    setSearchQueryState(q);
   }, []);
 
   const selectItem = React.useCallback(
@@ -170,16 +154,13 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo<StationsContextValue>(
     () => ({
       stations: STATIONS,
-      filteredStations,
       selected,
       selectedStation,
-      searchQuery,
       route,
       routeDistance,
       routeDuration,
       routeLoading,
       userLocation,
-      setSearchQuery,
       selectItem,
       selectStation,
       pendingFlyTo,
@@ -192,16 +173,13 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       getSelectionLabel,
     }),
     [
-      filteredStations,
       selected,
       selectedStation,
-      searchQuery,
       route,
       routeDistance,
       routeDuration,
       routeLoading,
       userLocation,
-      setSearchQuery,
       selectItem,
       selectStation,
       pendingFlyTo,

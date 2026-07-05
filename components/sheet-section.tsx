@@ -17,11 +17,15 @@ import type { Station } from '@/lib/stations';
 import {
   type BusStop,
   formatBusFacilityValue,
-  listBrtStops,
-  searchBusStops,
 } from '@/lib/bus-stops';
 import type { PlaceResult } from '@/lib/geocoding';
 import { usePlaceSearch } from '@/lib/use-place-search';
+import {
+  buildTransitSections,
+  type TransitListItem,
+  type TransitSection,
+  useTransitSearch,
+} from '@/lib/use-transit-search';
 import {
   ArrowLeft,
   Bus,
@@ -47,7 +51,6 @@ import {
   TextInput,
   View,
   useWindowDimensions,
-  type SectionListData,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -922,7 +925,7 @@ function SkeletonLine({ widthPct }: { widthPct: number }) {
   );
 }
 
-const PlaceSkeleton = React.memo(function PlaceSkeleton() {
+const SearchColumnSkeleton = React.memo(function SearchColumnSkeleton() {
   const opacity = useSharedValue(0.7);
   React.useEffect(() => {
     opacity.value = withRepeat(
@@ -947,10 +950,15 @@ const PlaceSkeleton = React.memo(function PlaceSkeleton() {
 
 const COL_LABEL_H = 36;
 
+type ListItem = TransitListItem;
+type Section = TransitSection;
+
 type SearchColumnsProps = {
   sections: Section[];
+  isTransitSearching: boolean;
   places: PlaceResult[];
-  isPlaceLoading: boolean;
+  isPlaceSearching: boolean;
+  query: string;
   t: Strings;
   lang: Lang;
   isRTL: boolean;
@@ -963,8 +971,10 @@ type SearchColumnsProps = {
 
 const SearchColumns = React.memo(function SearchColumns({
   sections,
+  isTransitSearching,
   places,
-  isPlaceLoading,
+  isPlaceSearching,
+  query,
   t,
   lang,
   isRTL,
@@ -977,9 +987,14 @@ const SearchColumns = React.memo(function SearchColumns({
 
   return (
     <View style={[colStyles.columns, { height: bodyHeight }, isRTL && colStyles.columnsRTL]}>
-      {/* ── Station column (offline, instant) ─────────────────────────── */}
+      {/* ── Station column (debounced filter; UI reacts to input immediately) ── */}
       <View style={colStyles.column}>
-        <ColumnLabel label={t.transitColumn} icon={TrainFront} color="#60a5fa" />
+        <ColumnLabel
+          label={t.transitColumn}
+          icon={TrainFront}
+          color="#60a5fa"
+          loading={isTransitSearching}
+        />
         <ScrollView
           style={{ height: scrollH }}
           contentContainerStyle={colStyles.columnScrollContent}
@@ -987,10 +1002,13 @@ const SearchColumns = React.memo(function SearchColumns({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}>
-          {sections.length === 0 ? (
+          {isTransitSearching ? (
+            <SearchColumnSkeleton />
+          ) : sections.length === 0 ? (
             <Text style={colStyles.colEmpty}>{t.noResults}</Text>
           ) : (
-            sections.map((section) => (
+            <View key={`transit-${query.trim()}`}>
+            {sections.map((section) => (
               <View key={section.title}>
                 <ColSectionDivider label={section.title} color={section.color} />
                 {section.data.map((item) =>
@@ -1020,7 +1038,8 @@ const SearchColumns = React.memo(function SearchColumns({
                   )
                 )}
               </View>
-            ))
+            ))}
+            </View>
           )}
         </ScrollView>
       </View>
@@ -1030,7 +1049,12 @@ const SearchColumns = React.memo(function SearchColumns({
 
       {/* ── Places column (Nominatim API, debounced) ───────────────────── */}
       <View style={colStyles.column}>
-        <ColumnLabel label={t.places} icon={MapPin} color="#a78bfa" loading={isPlaceLoading} />
+        <ColumnLabel
+          label={t.places}
+          icon={MapPin}
+          color="#a78bfa"
+          loading={isPlaceSearching || isTransitSearching}
+        />
         <ScrollView
           style={{ height: scrollH }}
           contentContainerStyle={colStyles.columnScrollContent}
@@ -1038,39 +1062,36 @@ const SearchColumns = React.memo(function SearchColumns({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}>
-          {isPlaceLoading && places.length === 0 ? (
-            <PlaceSkeleton />
-          ) : places.length > 0 ? (
-            places.map((place) => (
-              <CompactRow
-                key={place.id}
-                dotColor="#a78bfa"
-                dotSquare
-                name={place.name}
-                detail={place.displayName.split(',').slice(1, 2).join('').trim() || undefined}
-                cityLabel={place.cityName}
-                onPress={() => onPlacePress(place)}
-              />
-            ))
-          ) : !isPlaceLoading ? (
-            <Text style={colStyles.colEmpty}>{t.noPlacesFound}</Text>
-          ) : null}
+          {query.trim().length >= 2 ? (
+            isPlaceSearching ? (
+              <SearchColumnSkeleton />
+            ) : places.length > 0 ? (
+              <View key={`places-${query.trim()}`}>
+              {places.map((place) => (
+                <CompactRow
+                  key={place.id}
+                  dotColor="#a78bfa"
+                  dotSquare
+                  name={place.name}
+                  detail={place.displayName.split(',').slice(1, 2).join('').trim() || undefined}
+                  cityLabel={place.cityName}
+                  onPress={() => onPlacePress(place)}
+                />
+              ))}
+              </View>
+            ) : (
+              <Text style={colStyles.colEmpty}>{t.noPlacesFound}</Text>
+            )
+          ) : isTransitSearching ? (
+            <SearchColumnSkeleton />
+          ) : (
+            <Text style={colStyles.colEmpty}>{t.placeSearchHint}</Text>
+          )}
         </ScrollView>
       </View>
     </View>
   );
 });
-
-// ─── Search results (categorised) ────────────────────────────────────────────
-type ListItem =
-  | { kind: 'metro'; station: Station }
-  | { kind: 'brt'; stop: BusStop }
-  | { kind: 'bus'; stop: BusStop };
-
-type Section = SectionListData<
-  ListItem,
-  { title: string; icon: LucideIcon; color: string; loading?: boolean }
->;
 
 // ─── Inner ────────────────────────────────────────────────────────────────────
 const SheetSectionInner = () => {
@@ -1083,53 +1104,22 @@ const SheetSectionInner = () => {
   const { cityId } = useCity();
   const { isSheetVisible, isSheetLoading } = useMapLayers();
   const { setMapPaddingBottom } = useSheetDetent();
-  const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
+  const { selected, selectItem } = useStations();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const isSearchActive = searchQuery.trim().length > 0;
 
-  // ── Search change (stations filter is instant; places use usePlaceSearch debounce) ──
-  const handleSearchChange = React.useCallback(
-    (text: string) => {
-      setSearchQuery(text);
-    },
-    [setSearchQuery]
+  // Debounced search logic only — UI uses raw searchQuery / isSearchActive.
+  const { sections: transitSections, isSearching: isTransitSearching } = useTransitSearch(
+    searchQuery,
+    isSheetVisible,
+    t
   );
+  const { places, isSearching: isPlaceSearching } = usePlaceSearch(searchQuery, cityId, lang);
 
-  // ── Place search (debounced + aborted in the hook) ───────────────────────────
-  const { places, isPlaceLoading } = usePlaceSearch(searchQuery, cityId, lang);
-
-  // ── Bus stop search results (instant local filter) ───────────────────────────
-  const busResults = React.useMemo(
-    () => (searchQuery.trim().length >= 2 ? searchBusStops(searchQuery) : { brt: [], bus: [] }),
-    [searchQuery]
+  const listSections = React.useMemo(
+    () => buildTransitSections('', isSheetVisible, t),
+    [isSheetVisible, t]
   );
-
-  // ── Section data ─────────────────────────────────────────────────────────────
-  const hasQuery = searchQuery.trim().length > 0;
-
-  const metroItems = React.useMemo((): ListItem[] => {
-    if (!isSheetVisible('metro')) return [];
-    return filteredStations.map((s) => ({ kind: 'metro', station: s }));
-  }, [filteredStations, isSheetVisible]);
-
-  const brtItems = React.useMemo((): ListItem[] => {
-    if (!isSheetVisible('brt')) return [];
-    return listBrtStops(searchQuery).map((s) => ({ kind: 'brt', stop: s }));
-  }, [searchQuery, isSheetVisible]);
-
-  const busItems = React.useMemo((): ListItem[] => {
-    if (!isSheetVisible('bus')) return [];
-    return busResults.bus.map((s) => ({ kind: 'bus', stop: s }));
-  }, [busResults.bus, isSheetVisible]);
-
-  const sections = React.useMemo((): Section[] => {
-    const result: Section[] = [];
-    if (isSheetVisible('metro') && metroItems.length > 0)
-      result.push({ title: t.metroStations, icon: TrainFront, color: '#60a5fa', data: metroItems });
-    if (isSheetVisible('brt') && brtItems.length > 0)
-      result.push({ title: t.brtStops, icon: Bus, color: '#fb923c', data: brtItems });
-    if (isSheetVisible('bus') && busItems.length > 0)
-      result.push({ title: t.busStops, icon: Bus, color: '#94a3b8', data: busItems });
-    return result;
-  }, [metroItems, brtItems, busItems, t, isSheetVisible]);
 
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
@@ -1194,13 +1184,6 @@ const SheetSectionInner = () => {
     }
   }, [selectedKey, handleDetentChange]);
 
-  React.useEffect(() => {
-    if (hasQuery && !selected && currentDetent < 1) {
-      handleDetentChange(1);
-      sheetRef.current?.resize(1);
-    }
-  }, [hasQuery]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const searchBodyHeightRef = React.useRef(
     Math.max(160, Math.round(height * 0.5) - HEADER_HEIGHT - SPACING * 2)
   );
@@ -1218,21 +1201,41 @@ const SheetSectionInner = () => {
     [height, insets.bottom]
   );
 
+  const expandSheetForSearch = React.useCallback(() => {
+    const nextHeight = Math.max(160, Math.round(height * 0.5) - HEADER_HEIGHT - SPACING * 2);
+    searchBodyHeightRef.current = nextHeight;
+    setSearchBodyHeight(nextHeight);
+    handleDetentChange(1);
+    sheetRef.current?.resize(1);
+  }, [height, handleDetentChange]);
+
+  const handleSearchChange = React.useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (text.trim().length > 0) {
+        if (currentDetentRef.current < 1) {
+          expandSheetForSearch();
+        }
+      }
+    },
+    [expandSheetForSearch]
+  );
+
   useAnimatedReaction(
     () => animatedPosition.value,
     (sheetTop) => {
-      if (hasQuery) {
+      if (isSearchActive) {
         runOnJS(syncSearchBodyHeight)(sheetTop);
       }
     },
-    [hasQuery, syncSearchBodyHeight]
+    [isSearchActive, syncSearchBodyHeight]
   );
 
   React.useEffect(() => {
-    if (hasQuery) {
+    if (isSearchActive) {
       syncSearchBodyHeight(animatedPosition.value);
     }
-  }, [hasQuery, currentDetent, syncSearchBodyHeight, animatedPosition]);
+  }, [isSearchActive, currentDetent, syncSearchBodyHeight, animatedPosition]);
 
   // ── Floating close button ────────────────────────────────────────────────────
   const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
@@ -1267,7 +1270,7 @@ const SheetSectionInner = () => {
     selectItem(null);
     setSearchQuery('');
     sheetRef.current?.resize(1);
-  }, [selectItem, setSearchQuery]);
+  }, [selectItem]);
 
   const handlePlacePress = React.useCallback(
     (place: PlaceResult) => selectItem({ kind: 'place', place }, { flyTo: true }),
@@ -1281,7 +1284,6 @@ const SheetSectionInner = () => {
         label={section.title}
         icon={section.icon}
         color={section.color}
-        loading={section.loading}
       />
     ),
     []
@@ -1324,12 +1326,12 @@ const SheetSectionInner = () => {
   const contentStyle = [
     styles.content,
     isRTL && styles.contentRTL,
-    hasQuery && !selected && styles.searchSheetContent,
+    isSearchActive && !selected && styles.searchSheetContent,
   ];
 
   // In search mode the sheet hosts two independent ScrollViews, so TrueSheet
   // must NOT wrap content in a native scroll view.
-  const sheetScrollable = !hasQuery && !selected && !isSheetLoading && sections.length > 0;
+  const sheetScrollable = !isSearchActive && !selected && !isSheetLoading && listSections.length > 0;
 
   return (
     <>
@@ -1375,17 +1377,15 @@ const SheetSectionInner = () => {
           />
         ) : selected?.kind === 'place' ? (
           <PlaceDetail place={selected.place} sheetRef={sheetRef} onBackToList={handleBackToList} />
-        ) : isSheetLoading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="small" color={GRAY} />
-          </View>
-        ) : hasQuery ? (
-          /* ── Two-column search results ───────────────────────────────── */
+        ) : isSearchActive ? (
+          /* ── Two-column search results (immediate; columns load independently) */
           <View style={styles.searchHost}>
             <SearchColumns
-              sections={sections}
+              sections={transitSections}
+              isTransitSearching={isTransitSearching}
               places={places}
-              isPlaceLoading={isPlaceLoading}
+              isPlaceSearching={isPlaceSearching}
+              query={searchQuery}
               t={t}
               lang={lang}
               isRTL={isRTL}
@@ -1395,10 +1395,14 @@ const SheetSectionInner = () => {
               onPlacePress={handlePlacePress}
             />
           </View>
-        ) : sections.length > 0 ? (
+        ) : isSheetLoading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="small" color={GRAY} />
+          </View>
+        ) : listSections.length > 0 ? (
           /* ── Default single-column station list ──────────────────────── */
           <SectionList
-            sections={sections}
+            sections={listSections}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             renderSectionHeader={renderSectionHeader}
