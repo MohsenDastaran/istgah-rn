@@ -1,5 +1,5 @@
 import { useCity } from '@/lib/city-context';
-import { flyToCoordinate } from '@/lib/map-camera';
+import { flyToCoordinate, scheduleFlyTo } from '@/lib/map-camera';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { useSheetDetent } from '@/lib/sheet-detent-context';
 import { useStations, type MapSelection } from '@/lib/stations-context';
@@ -288,7 +288,7 @@ function MapContent() {
   const { isVisible } = useMapLayers();
   const { city, cityId } = useCity();
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { cameraRef } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
+  const { cameraRef, isLoaded } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
   const [hasPermission, setHasPermission] = React.useState(false);
 
   React.useEffect(() => {
@@ -317,12 +317,20 @@ function MapContent() {
   }, [cityId, city.center, city.zoom, cameraRef]);
 
   React.useEffect(() => {
-    if (!pendingFlyTo || !cameraRef.current) return;
-    flyToCoordinate(cameraRef.current, pendingFlyTo.center, {
-      mapPaddingBottom: pendingFlyTo.paddingBottom,
+    if (!pendingFlyTo) return;
+
+    const { cancel, done } = scheduleFlyTo(
+      () => cameraRef.current,
+      pendingFlyTo.center,
+      { mapPaddingBottom: pendingFlyTo.paddingBottom }
+    );
+
+    void done.then((success) => {
+      if (success) clearPendingFlyTo();
     });
-    clearPendingFlyTo();
-  }, [pendingFlyTo, clearPendingFlyTo, cameraRef]);
+
+    return cancel;
+  }, [pendingFlyTo, clearPendingFlyTo, isLoaded, cameraRef]);
 
   if (!mapComponents) return null;
   const { MapMarker, MapUserLocation, MapRoute, GeoJSONSource, Layer } = mapComponents;

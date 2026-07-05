@@ -39,7 +39,7 @@ type StationsContextValue = {
   selectItem: (item: MapSelection | null, options?: { flyTo?: boolean }) => void;
   /** @deprecated Use selectItem — kept for backward compatibility. */
   selectStation: (station: Station | null, options?: { flyTo?: boolean }) => void;
-  pendingFlyTo: { center: [number, number]; paddingBottom: number } | null;
+  pendingFlyTo: { id: number; center: [number, number]; paddingBottom: number } | null;
   clearPendingFlyTo: () => void;
   setUserLocation: (coords: [number, number] | null) => void;
   fetchRoute: () => Promise<void>;
@@ -60,9 +60,11 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
   const [routeLoading, setRouteLoading] = React.useState(false);
   const [userLocation, setUserLocation] = React.useState<[number, number] | null>(null);
   const [pendingFlyTo, setPendingFlyTo] = React.useState<{
+    id: number;
     center: [number, number];
     paddingBottom: number;
   } | null>(null);
+  const pendingFlyToIdRef = React.useRef(0);
   const locateUserRef = React.useRef<(() => Promise<void>) | null>(null);
 
   const registerLocateUser = React.useCallback((handler: (() => Promise<void>) | null) => {
@@ -90,7 +92,9 @@ export function StationsProvider({ children }: { children: React.ReactNode }) {
       setSelected(item);
       if (options?.flyTo && item) {
         const { height } = Dimensions.get('window');
+        pendingFlyToIdRef.current += 1;
         setPendingFlyTo({
+          id: pendingFlyToIdRef.current,
           center: selectionCoordinates(item),
           paddingBottom: Math.round(height * DETAIL_SHEET_HEIGHT_FRACTION),
         });
