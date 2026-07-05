@@ -583,6 +583,8 @@ type MapUserLocationProps = {
   onPress?: () => void;
   /** Auto-request location permissions if not granted */
   autoRequestPermission?: boolean;
+  /** When set, skip internal permission handling and trust the parent */
+  permissionGranted?: boolean;
 };
 
 function MapUserLocation({
@@ -593,11 +595,14 @@ function MapUserLocation({
   minDisplacement,
   onPress,
   autoRequestPermission = true,
+  permissionGranted,
 }: MapUserLocationProps) {
-  const [hasPermission, setHasPermission] = useState(false);
-  const [permissionChecked, setPermissionChecked] = useState(false);
+  const [hasPermission, setHasPermission] = useState(permissionGranted ?? false);
+  const [permissionChecked, setPermissionChecked] = useState(permissionGranted !== undefined);
 
   useEffect(() => {
+    if (permissionGranted !== undefined) return;
+
     let mounted = true;
 
     const checkAndRequestPermissions = async () => {
@@ -608,10 +613,8 @@ function MapUserLocation({
             setHasPermission(granted);
             setPermissionChecked(true);
           }
-        } else {
-          if (mounted) {
-            setPermissionChecked(true);
-          }
+        } else if (mounted) {
+          setPermissionChecked(true);
         }
       } catch (error) {
         console.error('Error requesting location permissions:', error);
@@ -629,7 +632,7 @@ function MapUserLocation({
     return () => {
       mounted = false;
     };
-  }, [visible, autoRequestPermission]);
+  }, [visible, autoRequestPermission, permissionGranted]);
 
   if (!visible || !permissionChecked || !hasPermission) {
     return null;

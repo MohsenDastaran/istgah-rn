@@ -43,6 +43,12 @@
       ],
       "expo-status-bar",
       "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Istgah to use your location to show your position on the map."
+        }
+      ],
       "@maplibre/maplibre-react-native"
     ],
     "experiments": {

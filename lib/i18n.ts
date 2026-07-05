@@ -88,6 +88,13 @@ const translations = {
     closeSheet: 'Close sheet',
     km: 'km',
     min: 'min',
+    openSettings: 'Open Settings',
+    locationPermissionTitle: 'Location access needed',
+    locationPermissionMessage:
+      'Allow Istgah to use your location so the map can show where you are.',
+    locationServicesOffTitle: 'Turn on location',
+    locationServicesOffMessage:
+      'Location services are turned off on this device. Enable them in Settings to use your position on the map.',
   },
   fa: {
     appName: 'ایستگاه',
@@ -167,6 +174,13 @@ const translations = {
     closeSheet: 'بستن پنل',
     km: 'کیلومتر',
     min: 'دقیقه',
+    openSettings: 'باز کردن تنظیمات',
+    locationPermissionTitle: 'دسترسی به موقعیت',
+    locationPermissionMessage:
+      'برای نمایش موقعیت شما روی نقشه، به ایستگاه اجازه دسترسی به موقعیت بدهید.',
+    locationServicesOffTitle: 'موقعیت‌یابی را روشن کنید',
+    locationServicesOffMessage:
+      'سرویس موقعیت‌یابی روی دستگاه خاموش است. برای استفاده از موقعیت خود روی نقشه، آن را در تنظیمات فعال کنید.',
   },
 } as const;
 

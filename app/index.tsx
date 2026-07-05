@@ -1,4 +1,5 @@
 import { useCity } from '@/lib/city-context';
+import { LocationAccessProvider, useLocationAccess } from '@/lib/location-access';
 import { flyToCoordinate, scheduleFlyTo } from '@/lib/map-camera';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { useSheetDetent } from '@/lib/sheet-detent-context';
@@ -12,7 +13,6 @@ import {
 import { METRO_NETWORK_GEOJSON, STATIONS, STATIONS_GEOJSON } from '@/lib/stations';
 import { AppHeader } from '@/components/app-header';
 import { Stack } from 'expo-router';
-import * as Location from 'expo-location';
 import { Bus, TrainFrontIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { StyleSheet, Text, TurboModuleRegistry, View, ActivityIndicator } from 'react-native';
@@ -287,19 +287,16 @@ function MapContent() {
     useStations();
   const { isVisible } = useMapLayers();
   const { city, cityId } = useCity();
+  const { mapPaddingBottom } = useSheetDetent();
+  const { hasAccess } = useLocationAccess();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { cameraRef, isLoaded } = (mapComponents as NonNullable<typeof mapComponents>).useMap();
-  const [hasPermission, setHasPermission] = React.useState(false);
-
-  React.useEffect(() => {
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
-      setHasPermission(status === 'granted');
-    });
-  }, []);
+  const hasFlownToUserRef = React.useRef(false);
+  const prevCityIdRef = React.useRef(cityId);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const position = (mapComponents as NonNullable<typeof mapComponents>).useCurrentPosition({
-    enabled: hasPermission,
+    enabled: hasAccess,
   });
   React.useEffect(() => {
     if (position?.coords) {
@@ -308,7 +305,21 @@ function MapContent() {
   }, [position, setUserLocation]);
 
   React.useEffect(() => {
+    if (!hasAccess || !position?.coords || hasFlownToUserRef.current || !isLoaded) return;
     if (!cameraRef.current) return;
+
+    hasFlownToUserRef.current = true;
+    flyToCoordinate(
+      cameraRef.current,
+      [position.coords.longitude, position.coords.latitude],
+      { mapPaddingBottom }
+    );
+  }, [hasAccess, position, isLoaded, cameraRef, mapPaddingBottom]);
+
+  React.useEffect(() => {
+    if (!cameraRef.current) return;
+    if (prevCityIdRef.current === cityId) return;
+    prevCityIdRef.current = cityId;
     cameraRef.current.flyTo({
       center: city.center,
       zoom: city.zoom,
@@ -350,7 +361,7 @@ function MapContent() {
         Layer={Layer}
       />
 
-      {hasPermission && <MapUserLocation />}
+      {hasAccess ? <MapUserLocation autoRequestPermission={false} permissionGranted /> : null}
     </>
   );
 }
@@ -361,30 +372,32 @@ function MapControlsOverlay() {
   const { setUserLocation, registerLocateUser } = useStations();
   const { mapPaddingBottom } = useSheetDetent();
   const { cameraRef } = useMap();
-  const [hasPermission, setHasPermission] = React.useState(false);
+  const { hasAccess, requestAccess } = useLocationAccess();
 
-  React.useEffect(() => {
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
-      setHasPermission(status === 'granted');
-    });
-  }, []);
-
-  const position = useCurrentPosition({ enabled: hasPermission });
+  const position = useCurrentPosition({ enabled: hasAccess });
 
   const handleLocate = React.useCallback(async () => {
-    if (!cameraRef.current) return;
     try {
-      const coords = position?.coords
+      let coords = position?.coords
         ? { longitude: position.coords.longitude, latitude: position.coords.latitude }
-        : await Location.getCurrentPositionAsync({}).then((l) => l.coords);
-      flyToCoordinate(cameraRef.current, [coords.longitude, coords.latitude], {
-        mapPaddingBottom,
-      });
+        : null;
+
+      if (!coords) {
+        coords = await requestAccess();
+        if (!coords) return;
+      }
+
+      const { done } = scheduleFlyTo(
+        () => cameraRef.current,
+        [coords.longitude, coords.latitude],
+        { mapPaddingBottom }
+      );
+      await done;
       setUserLocation([coords.longitude, coords.latitude]);
     } catch (error) {
       console.error('Location error:', error);
     }
-  }, [cameraRef, position, setUserLocation, mapPaddingBottom]);
+  }, [cameraRef, position, requestAccess, setUserLocation, mapPaddingBottom]);
 
   React.useEffect(() => {
     registerLocateUser(handleLocate);
@@ -394,7 +407,7 @@ function MapControlsOverlay() {
   return (
     <MapControls
       showZoom
-      showLocate={hasPermission}
+      showLocate
       position="bottom-right"
       onLocate={handleLocate}
     />
@@ -408,16 +421,18 @@ function MapWithStations() {
   const { Map } = mapComponents;
 
   return (
-    <View style={styles.mapHost}>
-      <Map zoom={city.zoom} center={city.center} controls={<MapControlsOverlay />}>
-        <MapContent />
-      </Map>
-      {isMapLoading ? (
-        <View style={styles.mapLoadingOverlay} pointerEvents="none">
-          <ActivityIndicator size="small" color="#ffffff" />
-        </View>
-      ) : null}
-    </View>
+    <LocationAccessProvider>
+      <View style={styles.mapHost}>
+        <Map zoom={city.zoom} center={city.center} controls={<MapControlsOverlay />}>
+          <MapContent />
+        </Map>
+        {isMapLoading ? (
+          <View style={styles.mapLoadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="small" color="#ffffff" />
+          </View>
+        ) : null}
+      </View>
+    </LocationAccessProvider>
   );
 }
 
