@@ -21,9 +21,10 @@ import {
   type Option,
 } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
-import { CITIES, useCity, CITY_IDS } from '@/lib/city-context';
+import { useBasemap, type BasemapId } from '@/lib/basemap-context';
 import { useI18n, type Lang } from '@/lib/i18n';
 import type { CityId } from '@/lib/cities';
+import { CITIES, useCity, CITY_IDS } from '@/lib/city-context';
 import {
   CircleAlert,
   Code,
@@ -32,6 +33,7 @@ import {
   Info,
   MapPin,
   Palette,
+  Satellite,
   Settings,
   User2,
   type LucideIcon,
@@ -201,6 +203,7 @@ function AboutDialog() {
 export function SettingsPanel() {
   const { t, lang, setLang, isRTL } = useI18n();
   const { cityId, setCity } = useCity();
+  const { basemap, setBasemap } = useBasemap();
   const { theme } = useUniwind();
   const insets = useSafeAreaInsets();
 
@@ -221,6 +224,11 @@ export function SettingsPanel() {
     { value: 'dark', label: t.themeDark },
   ];
 
+  const basemapOptions: Option[] = [
+    { value: 'street', label: t.basemapStreet },
+    { value: 'satellite', label: t.basemapSatellite },
+  ];
+
   const cityOptions: Option[] = CITY_IDS.map((id) => ({
     value: id,
     label: CITIES[id].name[lang],
@@ -228,6 +236,7 @@ export function SettingsPanel() {
 
   const selectedLang = langOptions.find((o) => o.value === lang);
   const selectedTheme = themeOptions.find((o) => o.value === (theme ?? 'light'));
+  const selectedBasemap = basemapOptions.find((o) => o.value === basemap);
   const selectedCity = cityOptions.find((o) => o.value === cityId);
 
   return (
@@ -277,6 +286,25 @@ export function SettingsPanel() {
               <SelectContent insets={contentInsets} className="w-32">
                 <SelectGroup>
                   {themeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} label={opt.label}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </SettingsRow>
+
+          <SettingsRow icon={Satellite} label={t.mapStyle}>
+            <Select
+              value={selectedBasemap}
+              onValueChange={(opt) => opt && setBasemap(opt.value as BasemapId)}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder={t.mapStyle} />
+              </SelectTrigger>
+              <SelectContent insets={contentInsets} className="w-32">
+                <SelectGroup>
+                  {basemapOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value} label={opt.label}>
                       {opt.label}
                     </SelectItem>

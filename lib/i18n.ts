@@ -60,6 +60,9 @@ const translations = {
     theme: 'Theme',
     themeLight: 'Light',
     themeDark: 'Dark',
+    mapStyle: 'Map style',
+    basemapStreet: 'Street',
+    basemapSatellite: 'Satellite',
     reportIssue: 'Report an Issue',
     reportIssueDescription:
       'Found a bug, a missing station or stop, or want to suggest a feature? You can report it directly on GitHub.',
@@ -155,6 +158,9 @@ const translations = {
     theme: 'تم',
     themeLight: 'روشن',
     themeDark: 'تیره',
+    mapStyle: 'نمای نقشه',
+    basemapStreet: 'خیابانی',
+    basemapSatellite: 'ماهواره‌ای',
     reportIssue: 'گزارش مشکل',
     reportIssueDescription:
       'باگ دیدید، ایستگاهی روی نقشه نیست، یا پیشنهادی دارید؟ می‌توانید مستقیماً در گیت‌هاب گزارش دهید.',

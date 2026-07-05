@@ -1,3 +1,5 @@
+import { useBasemap } from '@/lib/basemap-context';
+import { CARTO_STYLES, resolveMapStyle } from '@/lib/map-styles';
 import { cn } from '@/lib/utils';
 import {
   Callout,
@@ -61,10 +63,7 @@ function useMap() {
   return context;
 }
 
-const defaultStyles = {
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-};
+const defaultStyles = CARTO_STYLES;
 
 const MAP_LOAD_TIMEOUT_MS = 8000;
 
@@ -112,10 +111,14 @@ function Map({
   const [isLoaded, setIsLoaded] = useState(false);
   const [bearing, setBearing] = useState(0);
   const { theme } = useUniwind();
+  const { basemap } = useBasemap();
   const mapStyle =
-    theme === 'dark'
-      ? (styles?.dark ?? defaultStyles.dark)
-      : (styles?.light ?? defaultStyles.light);
+    styles != null
+      ? theme === 'dark'
+        ? (styles.dark ?? defaultStyles.dark)
+        : (styles.light ?? defaultStyles.light)
+      : resolveMapStyle(basemap, theme === 'dark' ? 'dark' : 'light');
+  const showAttribution = basemap === 'satellite' && styles == null;
 
   const markLoaded = useCallback(() => {
     setIsLoaded(true);
@@ -143,7 +146,7 @@ function Map({
           onPress={onPress}
           compass={false}
           logo={false}
-          attribution={false}>
+          attribution={showAttribution}>
           <Camera ref={cameraRef} zoom={zoom} center={center} easing="fly" duration={1000} />
           {children}
         </MapLibreMap>

@@ -1,5 +1,6 @@
 import '@/global.css';
 
+import { BasemapProvider } from '@/lib/basemap-context';
 import { NAV_THEME } from '@/lib/theme';
 import { CityProvider } from '@/lib/city-context';
 import { I18nProvider } from '@/lib/i18n';
@@ -24,17 +25,19 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <I18nProvider>
         <CityProvider>
-          <MapLayersProvider>
-            <StationsProvider>
-              <SheetDetentProvider>
-                <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-                  <StatusBar style="light" />
-                  <Stack />
-                  <PortalHost />
-                </ThemeProvider>
-              </SheetDetentProvider>
-            </StationsProvider>
-          </MapLayersProvider>
+          <BasemapProvider>
+            <MapLayersProvider>
+              <StationsProvider>
+                <SheetDetentProvider>
+                  <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+                    <StatusBar style="light" />
+                    <Stack />
+                    <PortalHost />
+                  </ThemeProvider>
+                </SheetDetentProvider>
+              </StationsProvider>
+            </MapLayersProvider>
+          </BasemapProvider>
         </CityProvider>
       </I18nProvider>
     </SafeAreaProvider>
