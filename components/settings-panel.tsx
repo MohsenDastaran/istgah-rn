@@ -92,11 +92,14 @@ function FooterLinkTrigger({
 }
 
 // ─── Basemap toggle (street / satellite) ─────────────────────────────────────
-const BASEMAP_OPTIONS: { id: BasemapId; icon: LucideIcon; labelKey: 'basemapStreet' | 'basemapSatellite' }[] =
-  [
-    { id: 'street', icon: Map, labelKey: 'basemapStreet' },
-    { id: 'satellite', icon: Satellite, labelKey: 'basemapSatellite' },
-  ];
+const BASEMAP_OPTIONS: {
+  id: BasemapId;
+  icon: LucideIcon;
+  labelKey: 'basemapStreet' | 'basemapSatellite';
+}[] = [
+  { id: 'street', icon: Map, labelKey: 'basemapStreet' },
+  { id: 'satellite', icon: Satellite, labelKey: 'basemapSatellite' },
+];
 
 function BasemapToggle({
   basemap,
@@ -128,7 +131,7 @@ function BasemapToggle({
                 isFirst && 'rounded-l-lg',
                 isLast && 'rounded-r-lg',
                 isRTL && isFirst && 'rounded-l-none rounded-r-lg',
-                isRTL && isLast && 'rounded-r-none rounded-l-lg',
+                isRTL && isLast && 'rounded-l-lg rounded-r-none',
                 selected && 'bg-background shadow-sm'
               )}>
               <Icon
@@ -198,6 +201,8 @@ const ABOUT_FEATURE_KEYS = [
   'aboutFeatureMetroBrtBus',
   'aboutFeatureMultiCity',
   'aboutFeatureRouting',
+  'aboutFeaturePlaceSearch',
+  'aboutFeatureSatelliteBasemap',
   'aboutFeatureI18n',
   'aboutFeatureTheme',
 ] as const;

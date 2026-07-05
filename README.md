@@ -31,7 +31,7 @@
 
 **ایستگاه** یک اپلیکیشن موبایل بومی (React Native) برای کاوش شبکه حمل‌ونقل عمومی در ایران است. ایستگاه‌های **مترو**، **BRT** و **اتوبوس** را روی یک نقشه ببینید، جستجو کنید، جزئیات هر ایستگاه را بخوانید و از موقعیت فعلی‌تان تا مقصد انتخاب‌شده **مسیریابی** دریافت کنید.
 
-از **۶ شهر** (تهران، اصفهان، مشهد، تبریز، کرج، شیراز) شهر پیش‌فرض خود را انتخاب کنید. لایه‌های نقشه را با دکمه‌های بالای صفحه روشن/خاموش کنید. رابط کاربری به‌صورت پیش‌فرض از زبان دستگاه پیروی می‌کند و بین **فارسی (RTL)** و **انگلیسی (LTR)** قابل تعویض است؛ **تم روشن و تاریک** نیز از تنظیمات در دسترس است.
+از **۶ شهر** (تهران، اصفهان، مشهد، تبریز، کرج، شیراز) شهر پیش‌فرض خود را انتخاب کنید. لایه‌های نقشه را با دکمه‌های بالای صفحه روشن/خاموش کنید. علاوه بر ایستگاه‌ها، **آدرس و مکان** را با API اوپن‌استریت‌مپ جستجو کنید. بین **نمای خیابانی و ماهواره‌ای** نقشه از تنظیمات جابه‌جا شوید. برای ایستگاه‌های اتوبوس و BRT، **زمان رسیدن** را با یک دکمه (شماره‌گیری USSD) بپرسید. رابط کاربری به‌صورت پیش‌فرض از زبان دستگاه پیروی می‌کند و بین **فارسی (RTL)** و **انگلیسی (LTR)** قابل تعویض است؛ **تم روشن و تاریک** نیز از تنظیمات در دسترس است.
 
 ---
 
@@ -43,6 +43,9 @@
 | **مترو، BRT و اتوبوس**   | سه لایه جدا با دکمه‌های بالای صفحه؛ خطوط BRT و ایستگاه‌های اتوبوس تهران                     |
 | **چند شهر**              | تهران، اصفهان، مشهد، تبریز، کرج و شیراز — انتخاب شهر پیش‌فرض از تنظیمات                      |
 | **جستجوی دوزبانه**       | جستجو با نام فارسی یا انگلیسی؛ جستجوی ایستگاه‌های اتوبوس با تأخیر (debounce)                |
+| **جستجوی مکان (API)**    | جستجوی آدرس و مکان با [Nominatim](https://nominatim.openstreetmap.org)؛ محدود به محدوده شهر |
+| **نقشه ماهواره‌ای**      | تعویض بین نمای خیابانی (CARTO) و ماهواره‌ای (Esri) از تنظیمات                               |
+| **زمان رسیدن اتوبوس**    | دکمه در جزئیات ایستگاه؛ کپی کد و شماره‌گیری USSD `*137*3*7*1#`                              |
 | **برگه پایینی بومی**     | تجربه روان با [True Sheet](https://github.com/lodev09/react-native-true-sheet) و Reanimated |
 | **مسیریابی**             | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی)                                 |
 | **باز کردن در نقشه**      | ارسال مختصات به اپ نقشه دستگاه برای مسیریابی خارجی                                          |
@@ -134,16 +137,21 @@ istgah-rn/
 │   └── tehranBRTLines.json # خطوط BRT
 ├── components/
 │   ├── sheet-section.tsx   # برگه پایینی، جستجو، جزئیات
-│   ├── settings-panel.tsx  # تنظیمات (زبان، تم، شهر)
+│   ├── settings-panel.tsx  # تنظیمات (نقشه، زبان، تم، شهر)
 │   ├── station-layer-toggle.tsx  # کلید مترو / BRT / اتوبوس
 │   └── ui/                 # اجزای UI (نقشه، دیالوگ، …)
 ├── lib/
 │   ├── i18n.ts             # ترجمه فارسی / انگلیسی
 │   ├── cities.ts           # شهرهای پشتیبانی‌شده
 │   ├── bus-stops.ts        # داده و GeoJSON اتوبوس/BRT
+│   ├── basemap-context.tsx     # نمای خیابانی / ماهواره‌ای
+│   ├── map-styles.ts           # استایل CARTO و Esri
+│   ├── geocoding.ts            # جستجوی مکان (Nominatim)
+│   ├── use-place-search.ts     # hook جستجوی مکان
+│   ├── bus-arrival.ts          # USSD زمان رسیدن اتوبوس
 │   ├── map-layers-context.tsx  # لایه‌های نقشه
 │   ├── stations-context.tsx    # state انتخاب و مسیریابی
-│   └── theme.ts            # تم ناوبری
+│   └── theme.ts                # تم ناوبری
 ```
 
 ---
@@ -167,6 +175,7 @@ flowchart TB
     subgraph Data
         Stations["metro + bus GeoJSON"]
         OSRM["OSRM Routing API"]
+        Nominatim["Nominatim Geocoding API"]
     end
 
     Stations --> Ctx
@@ -175,6 +184,7 @@ flowchart TB
     Ctx --> Map
     Ctx --> Sheet
     I18n --> Sheet
+    Sheet -->|جستجوی مکان| Nominatim
     Ctx -->|مسیریابی| OSRM
     OSRM -->|GeoJSON route| Map
 ```
@@ -192,6 +202,8 @@ flowchart TB
 - **۶ شهر** با مرکز نقشه از پیش‌تنظیم‌شده در `lib/cities.ts`
 - فقط ایستگاه‌های مترو با `Is Active: "T"` نمایش داده می‌شوند
 - مسیریابی از سرویس عمومی [OSRM](https://router.project-osrm.org) (حالت رانندگی؛ تخمینی)
+- جستجوی مکان از [Nominatim](https://nominatim.openstreetmap.org) (محدود به bbox هر شهر)
+- کاشی ماهواره‌ای از [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df22758200c4ecb38b050749fbb916)
 
 ---
 
@@ -205,7 +217,8 @@ flowchart TB
 | UI          | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
 | انیمیشن     | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                           |
 | موقعیت      | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                          |
-| استایل نقشه | [CARTO Basemaps](https://carto.com/basemaps)                                                                                                  |
+| استایل نقشه | [CARTO Basemaps](https://carto.com/basemaps) · [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df22758200c4ecb38b050749fbb916) |
+| جستجوی مکان | [Nominatim](https://nominatim.openstreetmap.org) (OpenStreetMap)                                                                                |
 
 ---
 
@@ -262,7 +275,7 @@ flowchart TB
 
 **Istgah** (Persian for _station_) is a native mobile app built with React Native for exploring public transit in Iran. View **metro**, **BRT**, and **regular bus** stops on one map, search by name, read station details, and get **turn-by-turn-style routing** from your location to any stop.
 
-Pick a default city from **6 supported cities** (Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz). Toggle map layers from the header control. The UI follows the device locale by default and switches between **Persian (RTL)** and **English (LTR)**; **light and dark themes** are available in Settings.
+Pick a default city from **6 supported cities** (Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz). Toggle map layers from the header control. Search **addresses and landmarks** via the OpenStreetMap API alongside transit stops. Switch between **street and satellite** basemaps in Settings. For bus and BRT stops, check **arrival times** with one tap (USSD dialer). The UI follows the device locale by default and switches between **Persian (RTL)** and **English (LTR)**; **light and dark themes** are available in Settings.
 
 ---
 
@@ -274,6 +287,9 @@ Pick a default city from **6 supported cities** (Tehran, Isfahan, Mashhad, Tabri
 | **Metro, BRT & bus**     | Three toggleable layers; Tehran BRT lines and bus stop dataset                                |
 | **Multi-city**           | Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz — default city in Settings                  |
 | **Bilingual search**     | Filter by Persian or English; debounced bus stop search                                       |
+| **Place search (API)**   | Address & landmark lookup via [Nominatim](https://nominatim.openstreetmap.org); city-bounded  |
+| **Satellite basemap**    | Street (CARTO) and satellite (Esri) map styles in Settings                                    |
+| **Bus arrival inquiry**  | Button on stop details; copies station code and dials USSD `*137*3*7*1#`                       |
 | **Native bottom sheet**  | Fluid UX with [True Sheet](https://github.com/lodev09/react-native-true-sheet) and Reanimated |
 | **Directions**           | Route from your location via OSRM (distance & ETA)                                            |
 | **Open in Maps**         | Hand off coordinates to the device maps app                                                   |
@@ -365,16 +381,21 @@ istgah-rn/
 │   └── tehranBRTLines.json # BRT line geometries
 ├── components/
 │   ├── sheet-section.tsx   # Bottom sheet, search, details
-│   ├── settings-panel.tsx  # Settings (language, theme, city)
+│   ├── settings-panel.tsx  # Settings (basemap, language, theme, city)
 │   ├── station-layer-toggle.tsx  # Metro / BRT / Bus toggle
 │   └── ui/                 # UI primitives (map, dialog, …)
 ├── lib/
 │   ├── i18n.ts             # Persian / English strings
 │   ├── cities.ts           # Supported cities
 │   ├── bus-stops.ts        # Bus/BRT data & GeoJSON
+│   ├── basemap-context.tsx     # Street / satellite basemap
+│   ├── map-styles.ts           # CARTO & Esri map styles
+│   ├── geocoding.ts            # Place search (Nominatim)
+│   ├── use-place-search.ts     # Place search hook
+│   ├── bus-arrival.ts          # Bus arrival USSD helper
 │   ├── map-layers-context.tsx  # Map layer visibility
 │   ├── stations-context.tsx    # Selection & routing state
-│   └── theme.ts            # Navigation theme
+│   └── theme.ts                # Navigation theme
 ```
 
 ---
@@ -398,6 +419,7 @@ flowchart TB
     subgraph Data
         Stations["metro + bus GeoJSON"]
         OSRM["OSRM Routing API"]
+        Nominatim["Nominatim Geocoding API"]
     end
 
     Stations --> Ctx
@@ -406,6 +428,7 @@ flowchart TB
     Ctx --> Map
     Ctx --> Sheet
     I18n --> Sheet
+    Sheet -->|place search| Nominatim
     Ctx -->|routing| OSRM
     OSRM -->|GeoJSON route| Map
 ```
@@ -423,6 +446,8 @@ flowchart TB
 - **6 cities** with preset map centers in `lib/cities.ts`
 - Only metro stations marked `Is Active: "T"` are shown
 - Routing uses the public [OSRM](https://router.project-osrm.org) API (driving profile; approximate)
+- Place search uses [Nominatim](https://nominatim.openstreetmap.org) (bounded to each city's bbox)
+- Satellite tiles from [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df22758200c4ecb38b050749fbb916)
 
 ---
 
@@ -436,7 +461,8 @@ flowchart TB
 | UI        | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
 | Animation | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                           |
 | Location  | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                          |
-| Map tiles | [CARTO Basemaps](https://carto.com/basemaps)                                                                                                  |
+| Map tiles | [CARTO Basemaps](https://carto.com/basemaps) · [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df22758200c4ecb38b050749fbb916) |
+| Geocoding | [Nominatim](https://nominatim.openstreetmap.org) (OpenStreetMap)                                                                              |
 
 ---
 
