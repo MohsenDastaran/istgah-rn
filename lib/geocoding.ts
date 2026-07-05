@@ -8,6 +8,17 @@ export type PlaceResult = {
   displayName: string;
   coordinate: [number, number];
   category?: string;
+  /** City or locality from Nominatim address (may be localized). */
+  cityName?: string;
+};
+
+type NominatimAddress = {
+  city?: string;
+  town?: string;
+  village?: string;
+  municipality?: string;
+  county?: string;
+  state?: string;
 };
 
 type NominatimFeature = {
@@ -18,7 +29,20 @@ type NominatimFeature = {
   lat: string;
   type?: string;
   class?: string;
+  address?: NominatimAddress;
 };
+
+function extractCityName(address?: NominatimAddress): string | undefined {
+  if (!address) return undefined;
+  return (
+    address.city ||
+    address.town ||
+    address.municipality ||
+    address.village ||
+    address.county ||
+    address.state
+  );
+}
 
 export async function searchPlaces(
   query: string,
@@ -26,12 +50,13 @@ export async function searchPlaces(
 ): Promise<PlaceResult[]> {
   const city = CITIES[cityId];
   const [west, north, east, south] = city.bbox;
+  const fallbackCity = city.name[lang];
 
   const params = new URLSearchParams({
     q: query,
     format: 'json',
-    limit: '8',
-    addressdetails: '0',
+    limit: '10',
+    addressdetails: '1',
     viewbox: `${west},${north},${east},${south}`,
     bounded: '1',
   });
@@ -54,5 +79,6 @@ export async function searchPlaces(
     displayName: f.display_name,
     coordinate: [parseFloat(f.lon), parseFloat(f.lat)] as [number, number],
     category: f.class,
+    cityName: extractCityName(f.address) ?? fallbackCity,
   }));
 }

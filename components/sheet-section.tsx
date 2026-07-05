@@ -7,6 +7,7 @@ import {
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
 import { useCity } from '@/lib/city-context';
+import { cityLabelFromName } from '@/lib/cities';
 import { useI18n, type Lang, type Strings } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { sheetDetentFraction, useSheetDetent } from '@/lib/sheet-detent-context';
@@ -439,13 +440,11 @@ const StationListRow = React.memo(function StationListRow({
 // ─── Metro station row ────────────────────────────────────────────────────────
 const MetroRow = React.memo(function MetroRow({
   station,
-  cityLabel,
   typeLabel,
   lang,
   onPress,
 }: {
   station: Station;
-  cityLabel: string;
   typeLabel: string;
   lang: Lang;
   onPress: () => void;
@@ -454,7 +453,7 @@ const MetroRow = React.memo(function MetroRow({
     <StationListRow
       name={station.name[lang]}
       detail={station.line}
-      cityLabel={cityLabel}
+      cityLabel={cityLabelFromName(station.city, lang)}
       typeLabel={typeLabel}
       typeKind="metro"
       dotColor={station.lineColor}
@@ -467,14 +466,12 @@ const MetroRow = React.memo(function MetroRow({
 // ─── Bus stop row ─────────────────────────────────────────────────────────────
 const BusRow = React.memo(function BusRow({
   stop,
-  cityLabel,
   typeLabel,
   typeKind,
   lang,
   onPress,
 }: {
   stop: BusStop;
-  cityLabel: string;
   typeLabel: string;
   typeKind: 'brt' | 'bus';
   lang: Lang;
@@ -488,7 +485,7 @@ const BusRow = React.memo(function BusRow({
     <StationListRow
       name={name}
       detail={detail || undefined}
-      cityLabel={cityLabel}
+      cityLabel={cityLabelFromName(stop.city, lang)}
       typeLabel={typeLabel}
       typeKind={typeKind}
       dotColor={dotColor}
@@ -500,12 +497,10 @@ const BusRow = React.memo(function BusRow({
 // ─── Place row ────────────────────────────────────────────────────────────────
 const PlaceRow = React.memo(function PlaceRow({
   place,
-  cityLabel,
   typeLabel,
   onPress,
 }: {
   place: PlaceResult;
-  cityLabel: string;
   typeLabel: string;
   onPress: () => void;
 }) {
@@ -538,9 +533,11 @@ const PlaceRow = React.memo(function PlaceRow({
               {typeLabel}
             </Text>
           </View>
-          <Text className="text-[11px] text-[#b2bac8]" numberOfLines={1}>
-            {cityLabel}
-          </Text>
+          {place.cityName ? (
+            <Text className="text-[11px] text-[#b2bac8]" numberOfLines={1}>
+              {place.cityName}
+            </Text>
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -866,12 +863,14 @@ const CompactRow = React.memo(function CompactRow({
   dotSquare,
   name,
   detail,
+  cityLabel,
   onPress,
 }: {
   dotColor: string;
   dotSquare?: boolean;
   name: string;
   detail?: string;
+  cityLabel?: string;
   onPress: () => void;
 }) {
   return (
@@ -884,6 +883,11 @@ const CompactRow = React.memo(function CompactRow({
         {detail ? (
           <Text style={colStyles.compactDetail} numberOfLines={1}>
             {detail}
+          </Text>
+        ) : null}
+        {cityLabel ? (
+          <Text style={colStyles.compactCity} numberOfLines={1}>
+            {cityLabel}
           </Text>
         ) : null}
       </View>
@@ -928,7 +932,6 @@ type SearchColumnsProps = {
   sections: Section[];
   places: PlaceResult[];
   isPlaceLoading: boolean;
-  cityLabel: string;
   t: Strings;
   lang: Lang;
   isRTL: boolean;
@@ -973,6 +976,7 @@ const SearchColumns = React.memo(function SearchColumns({
                       dotColor={item.station.lineColor}
                       name={item.station.name[lang]}
                       detail={item.station.line}
+                      cityLabel={cityLabelFromName(item.station.city, lang)}
                       onPress={() => onStationPress(item.station)}
                     />
                   ) : (
@@ -982,6 +986,7 @@ const SearchColumns = React.memo(function SearchColumns({
                       dotSquare={item.kind === 'brt'}
                       name={busStopDisplayName(item.stop, lang)}
                       detail={item.kind === 'brt' ? item.stop.brtLine || undefined : item.stop.lines || undefined}
+                      cityLabel={cityLabelFromName(item.stop.city, lang)}
                       onPress={() => onBusStopPress(item.stop, item.kind)}
                     />
                   )
@@ -1013,6 +1018,7 @@ const SearchColumns = React.memo(function SearchColumns({
                 dotSquare
                 name={place.name}
                 detail={place.displayName.split(',').slice(1, 2).join('').trim() || undefined}
+                cityLabel={place.cityName}
                 onPress={() => onPlacePress(place)}
               />
             ))
@@ -1041,12 +1047,10 @@ const SheetSectionInner = () => {
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
   const { t, lang, isRTL } = useI18n();
-  const { city, cityId } = useCity();
+  const { cityId } = useCity();
   const { isSheetVisible, isSheetLoading } = useMapLayers();
   const { setMapPaddingBottom } = useSheetDetent();
   const { filteredStations, selected, selectItem, searchQuery, setSearchQuery } = useStations();
-
-  const cityLabel = city.name[lang];
 
   // ── Search change (stations filter is instant; places use usePlaceSearch debounce) ──
   const handleSearchChange = React.useCallback(
@@ -1227,7 +1231,6 @@ const SheetSectionInner = () => {
         return (
           <MetroRow
             station={item.station}
-            cityLabel={cityLabel}
             typeLabel={t.layerMetro}
             lang={lang}
             onPress={() => handleStationPress(item.station)}
@@ -1238,7 +1241,6 @@ const SheetSectionInner = () => {
         return (
           <BusRow
             stop={item.stop}
-            cityLabel={cityLabel}
             typeLabel={item.kind === 'brt' ? t.layerBrt : t.layerBus}
             typeKind={item.kind}
             lang={lang}
@@ -1248,7 +1250,7 @@ const SheetSectionInner = () => {
       }
       return null;
     },
-    [lang, cityLabel, t.layerMetro, t.layerBrt, t.layerBus, handleStationPress, handleBusStopPress]
+    [lang, t.layerMetro, t.layerBrt, t.layerBus, handleStationPress, handleBusStopPress]
   );
 
   const keyExtractor = React.useCallback(
@@ -1321,7 +1323,6 @@ const SheetSectionInner = () => {
             sections={sections}
             places={places}
             isPlaceLoading={isPlaceLoading}
-            cityLabel={cityLabel}
             t={t}
             lang={lang}
             isRTL={isRTL}
@@ -1522,6 +1523,13 @@ const colStyles = StyleSheet.create({
     color: GRAY,
     lineHeight: 14,
     marginTop: 1,
+  },
+  compactCity: {
+    fontSize: 10,
+    color: GRAY,
+    lineHeight: 13,
+    marginTop: 1,
+    opacity: 0.85,
   },
   // Skeleton
   skeletonDot: {

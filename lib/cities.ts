@@ -61,3 +61,19 @@ export const DEFAULT_CITY_ID: CityId = 'tehran';
 export function isCityId(value: string): value is CityId {
   return value in CITIES;
 }
+
+/** Maps metro dataset `City` field (English) to a localized label. */
+const METRO_CITY_NAMES: Record<string, CityId> = {
+  Tehran: 'tehran',
+  Isfahan: 'isfahan',
+  Mashhad: 'mashhad',
+  Tabriz: 'tabriz',
+  Karaj: 'karaj',
+  Shiraz: 'shiraz',
+};
+
+export function cityLabelFromName(cityName: string, lang: 'en' | 'fa'): string {
+  const id = METRO_CITY_NAMES[cityName.trim()];
+  if (id) return CITIES[id].name[lang];
+  return cityName;
+}

@@ -17,6 +17,8 @@ export type BusStop = {
   light: string;
   disabledAccess: string;
   transportMode: string;
+  /** All bus/BRT stops in the dataset are in Tehran. */
+  city: 'Tehran';
 };
 
 /** Map raw Persian facility values to localized labels when lang is English. */
@@ -73,6 +75,7 @@ export const BUS_STOPS: BusStop[] = (
       light: String(p['LIGHT'] ?? ''),
       disabledAccess: String(p['DISABLED'] ?? ''),
       transportMode: String(p['TRANSPORTM'] ?? ''),
+      city: 'Tehran' as const,
     };
   });
 

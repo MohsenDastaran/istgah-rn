@@ -5,6 +5,8 @@ import { lineColors as LINE_COLORS, lineNames as LINE_NAMES } from '@/assets/dat
 export type Station = {
   id: string;
   name: { en: string; fa: string };
+  /** English city name from dataset, e.g. "Tehran" */
+  city: string;
   /** Primary line key, e.g. "1", "2", "1,3" for interchange stations */
   lineKey: string;
   /** Human-readable label for the primary line */
@@ -25,6 +27,7 @@ function mapRawStation(s: RawStation): Station {
   return {
     id: s.ID,
     name: { en: s['Name English'], fa: s['Name Persian'] },
+    city: s.City,
     lineKey,
     line: (LINE_NAMES as Record<string, string>)[primary] ?? `Line ${primary}`,
     lineColor: (LINE_COLORS as Record<string, string>)[primary] ?? '#888888',
