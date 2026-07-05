@@ -28,6 +28,7 @@ const BRT_LINES_LAYER_ID = 'brt-lines';
 const METRO_STATIONS_LAYER_ID = 'metro-stations';
 const BRT_STOPS_LAYER_ID = 'brt-stops';
 const BUS_STOPS_LAYER_ID = 'bus-stops';
+const BRT_STOP_COLOR = '#0d9488';
 
 function layerVisibility(visible: boolean) {
   return { visibility: visible ? ('visible' as const) : ('none' as const) };
@@ -158,11 +159,11 @@ const MapLayers = React.memo(function MapLayers({
 
   const brtCirclePaint = React.useMemo(
     () => ({
-      circleColor: '#f97316',
+      circleColor: BRT_STOP_COLOR,
       circleStrokeColor: '#ffffff',
-      circleStrokeWidth: 1.5,
-      circleRadius: zoomCircleRadius(selectedBrtId, 5, 7, 9),
-      circleOpacity: ['interpolate', ['linear'], ['zoom'], 10, 0.45, 14, 0.85],
+      circleStrokeWidth: 2,
+      circleRadius: zoomCircleRadius(selectedBrtId, 4, 5, 6),
+      circleOpacity: ['interpolate', ['linear'], ['zoom'], 10, 0.55, 14, 0.95],
     }),
     [selectedBrtId]
   );
@@ -234,7 +235,7 @@ const MapLayers = React.memo(function MapLayers({
         <Layer
           id={BRT_LINES_LAYER_ID}
           type="line"
-          beforeId={METRO_STATIONS_LAYER_ID}
+          beforeId={BRT_STOPS_LAYER_ID}
           layout={layerVisibility(showBrt)}
           paint={{
             lineColor: ['get', 'color'],
@@ -264,8 +265,8 @@ const MapLayers = React.memo(function MapLayers({
 
       {selected?.kind === 'brt' && (
         <MapMarker coordinate={selected.stop.coordinate}>
-          <View style={[markerStyles.pinMedium, { backgroundColor: '#f97316' }]}>
-            <Bus size={12} color="#ffffff" strokeWidth={2.5} />
+          <View style={[markerStyles.pinBrt, { backgroundColor: BRT_STOP_COLOR }]}>
+            <Bus size={10} color="#ffffff" strokeWidth={2.5} />
           </View>
         </MapMarker>
       )}
@@ -501,11 +502,11 @@ const markerStyles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 6,
   },
-  pinMedium: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2.5,
+  pinBrt: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
