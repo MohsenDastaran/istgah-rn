@@ -33,6 +33,7 @@ import {
 import * as React from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Platform,
   Pressable,
   SectionList,
@@ -784,6 +785,29 @@ const SheetSectionInner = () => {
     },
     [syncMapPadding]
   );
+
+  const currentDetentRef = React.useRef(currentDetent);
+  currentDetentRef.current = currentDetent;
+
+  React.useEffect(() => {
+    const onBackPress = () => {
+      const index = currentDetentRef.current;
+      if (index >= 2) {
+        handleDetentChange(1);
+        sheetRef.current?.resize(1);
+        return true;
+      }
+      if (index === 1) {
+        handleDetentChange(0);
+        sheetRef.current?.resize(0);
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [handleDetentChange]);
 
   React.useEffect(() => {
     syncMapPadding(currentDetent);
