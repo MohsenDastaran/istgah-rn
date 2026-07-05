@@ -37,23 +37,21 @@
 
 ## ویژگی‌ها
 
-| ویژگی                    | توضیح                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------- |
-| **نقشه تعاملی**          | نمایش ایستگاه‌ها با MapLibre؛ رنگ هر ایستگاه مترو مطابق خط                                   |
-| **مترو، BRT و اتوبوس**   | سه لایه جدا با دکمه‌های بالای صفحه؛ خطوط BRT و ایستگاه‌های اتوبوس تهران                     |
-| **چند شهر**              | تهران، اصفهان، مشهد، تبریز، کرج و شیراز — انتخاب شهر پیش‌فرض از تنظیمات                      |
-| **جستجوی دوزبانه**       | جستجو با نام فارسی یا انگلیسی؛ جستجوی ایستگاه‌های اتوبوس با تأخیر (debounce)                |
-| **جستجوی مکان (API)**    | جستجوی آدرس و مکان با [Nominatim](https://nominatim.openstreetmap.org)؛ محدود به محدوده شهر |
-| **نقشه ماهواره‌ای**      | تعویض بین نمای خیابانی (CARTO) و ماهواره‌ای (Esri) از تنظیمات                               |
-| **زمان رسیدن اتوبوس**    | دکمه در جزئیات ایستگاه؛ کپی کد و شماره‌گیری USSD `*137*3*7*1#`                              |
-| **برگه پایینی بومی**     | تجربه روان با [True Sheet](https://github.com/lodev09/react-native-true-sheet) و Reanimated |
-| **مسیریابی**             | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی)                                 |
-| **باز کردن در نقشه**      | ارسال مختصات به اپ نقشه دستگاه برای مسیریابی خارجی                                          |
-| **موقعیت‌یابی**          | نمایش موقعیت کاربر روی نقشه و دکمه «مکان من»                                                |
-| **فارسی / انگلیسی**      | تعویض زبان و چیدمان RTL از تنظیمات                                                          |
-| **تم روشن / تاریک**      | هماهنگ با نقشه و رابط کاربری (Uniwind)                                                      |
-| **داده آفلاین**          | ایستگاه‌های مترو و اتوبوس به‌صورت bundle — بدون نیاز به شبکه برای مرور                      |
-| **۷ خط مترو + BRT**      | داده کامل ایستگاه‌های فعال متروی تهران و شبکه BRT                                           |
+| ویژگی                      | توضیح                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| **نقشه تعاملی**            | نمایش ایستگاه‌ها با MapLibre؛ رنگ هر ایستگاه مترو مطابق خط                                  |
+| **مترو، BRT و اتوبوس**     | سه لایه جدا با دکمه‌های بالای صفحه؛ خطوط BRT و ایستگاه‌های اتوبوس تهران                     |
+| **پشتیبانی از چند شهر**    | تهران، اصفهان، مشهد، تبریز، کرج و شیراز — انتخاب شهر پیش‌فرض از تنظیمات                     |
+| **جستجوی دوزبانه**         | جستجو با نام فارسی یا انگلیسی؛ جستجوی ایستگاه‌های اتوبوس با تأخیر (debounce)                |
+| **جستجوی مکان (API)**      | جستجوی آدرس و مکان با [Nominatim](https://nominatim.openstreetmap.org)؛ محدود به محدوده شهر |
+| **نقشه ماهواره‌ای**        | تعویض بین نمای خیابانی (CARTO) و ماهواره‌ای (Esri) از تنظیمات                               |
+| **زمان رسیدن اتوبوس**      | دکمه در جزئیات ایستگاه؛ کپی کد و شماره‌گیری USSD `*137*3*7*1#`                              |
+| **مسیریابی**               | مسیر از موقعیت شما تا ایستگاه با OSRM (فاصله و زمان تخمینی)                                 |
+| **باز کردن در نقشه جانبی** | ارسال مختصات به اپ نقشه دستگاه برای مسیریابی خارجی                                          |
+| **موقعیت‌یابی**            | نمایش موقعیت کاربر روی نقشه و دکمه «مکان من»                                                |
+| **فارسی / انگلیسی**        | تعویض زبان و چیدمان RTL از تنظیمات                                                          |
+| **تم روشن / تاریک**        | هماهنگ با نقشه و رابط کاربری (Uniwind)                                                      |
+| **داده آفلاین**            | ایستگاه‌های مترو و اتوبوس — بدون نیاز به شبکه برای مرور                                     |
 
 ---
 
@@ -209,16 +207,16 @@ flowchart TB
 
 ## فناوری‌ها
 
-| لایه        | ابزار                                                                                                                                         |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| فریم‌ورک    | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/)        |
-| زبان        | [TypeScript](https://www.typescriptlang.org)                                                                                                  |
-| نقشه        | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native)                                                          |
-| UI          | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
-| انیمیشن     | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                           |
-| موقعیت      | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                          |
+| لایه        | ابزار                                                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| فریم‌ورک    | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/)         |
+| زبان        | [TypeScript](https://www.typescriptlang.org)                                                                                                   |
+| نقشه        | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native)                                                           |
+| UI          | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com)  |
+| انیمیشن     | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                            |
+| موقعیت      | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                           |
 | استایل نقشه | [CARTO Basemaps](https://carto.com/basemaps) · [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df22758200c4ecb38b050749fbb916) |
-| جستجوی مکان | [Nominatim](https://nominatim.openstreetmap.org) (OpenStreetMap)                                                                                |
+| جستجوی مکان | [Nominatim](https://nominatim.openstreetmap.org) (OpenStreetMap)                                                                               |
 
 ---
 
@@ -281,23 +279,23 @@ Pick a default city from **6 supported cities** (Tehran, Isfahan, Mashhad, Tabri
 
 ## Features
 
-| Feature                  | Description                                                                                   |
-| ------------------------ | --------------------------------------------------------------------------------------------- |
-| **Interactive map**      | MapLibre markers colored by metro line                                                        |
-| **Metro, BRT & bus**     | Three toggleable layers; Tehran BRT lines and bus stop dataset                                |
-| **Multi-city**           | Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz — default city in Settings                  |
-| **Bilingual search**     | Filter by Persian or English; debounced bus stop search                                       |
-| **Place search (API)**   | Address & landmark lookup via [Nominatim](https://nominatim.openstreetmap.org); city-bounded  |
-| **Satellite basemap**    | Street (CARTO) and satellite (Esri) map styles in Settings                                    |
-| **Bus arrival inquiry**  | Button on stop details; copies station code and dials USSD `*137*3*7*1#`                       |
-| **Native bottom sheet**  | Fluid UX with [True Sheet](https://github.com/lodev09/react-native-true-sheet) and Reanimated |
-| **Directions**           | Route from your location via OSRM (distance & ETA)                                            |
-| **Open in Maps**         | Hand off coordinates to the device maps app                                                   |
-| **User location**        | Live position with a locate-me control                                                        |
-| **Persian / English**    | Language switch and RTL layout from Settings                                                  |
-| **Light / dark theme**   | Synchronized map basemap and UI chrome (Uniwind)                                              |
-| **Offline-ready data**   | Bundled metro and bus datasets — browse without network                                       |
-| **7 metro lines + BRT**  | Full active Tehran metro dataset and BRT network                                              |
+| Feature                 | Description                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| **Interactive map**     | MapLibre markers colored by metro line                                                        |
+| **Metro, BRT & bus**    | Three toggleable layers; Tehran BRT lines and bus stop dataset                                |
+| **Multi-city**          | Tehran, Isfahan, Mashhad, Tabriz, Karaj, Shiraz — default city in Settings                    |
+| **Bilingual search**    | Filter by Persian or English; debounced bus stop search                                       |
+| **Place search (API)**  | Address & landmark lookup via [Nominatim](https://nominatim.openstreetmap.org); city-bounded  |
+| **Satellite basemap**   | Street (CARTO) and satellite (Esri) map styles in Settings                                    |
+| **Bus arrival inquiry** | Button on stop details; copies station code and dials USSD `*137*3*7*1#`                      |
+| **Native bottom sheet** | Fluid UX with [True Sheet](https://github.com/lodev09/react-native-true-sheet) and Reanimated |
+| **Directions**          | Route from your location via OSRM (distance & ETA)                                            |
+| **Open in Maps**        | Hand off coordinates to the device maps app                                                   |
+| **User location**       | Live position with a locate-me control                                                        |
+| **Persian / English**   | Language switch and RTL layout from Settings                                                  |
+| **Light / dark theme**  | Synchronized map basemap and UI chrome (Uniwind)                                              |
+| **Offline-ready data**  | Bundled metro and bus datasets — browse without network                                       |
+| **7 metro lines + BRT** | Full active Tehran metro dataset and BRT network                                              |
 
 ---
 
@@ -453,16 +451,16 @@ flowchart TB
 
 ## Tech Stack
 
-| Layer     | Tools                                                                                                                                         |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/)        |
-| Language  | [TypeScript](https://www.typescriptlang.org)                                                                                                  |
-| Maps      | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native)                                                          |
-| UI        | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com) |
-| Animation | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                           |
-| Location  | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                          |
+| Layer     | Tools                                                                                                                                          |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework | [Expo 56](https://expo.dev) · [React Native 0.85](https://reactnative.dev) · [Expo Router](https://docs.expo.dev/router/introduction/)         |
+| Language  | [TypeScript](https://www.typescriptlang.org)                                                                                                   |
+| Maps      | [@maplibre/maplibre-react-native](https://github.com/maplibre/maplibre-react-native)                                                           |
+| UI        | [True Sheet](https://github.com/lodev09/react-native-true-sheet) · [Uniwind](https://uniwind.dev) · [RN Primitives](https://rnprimitives.com)  |
+| Animation | [Reanimated 4](https://docs.swmansion.com/react-native-reanimated/)                                                                            |
+| Location  | [expo-location](https://docs.expo.dev/versions/latest/sdk/location/)                                                                           |
 | Map tiles | [CARTO Basemaps](https://carto.com/basemaps) · [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df22758200c4ecb38b050749fbb916) |
-| Geocoding | [Nominatim](https://nominatim.openstreetmap.org) (OpenStreetMap)                                                                              |
+| Geocoding | [Nominatim](https://nominatim.openstreetmap.org) (OpenStreetMap)                                                                               |
 
 ---
 
