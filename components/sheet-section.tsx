@@ -7,7 +7,7 @@ import {
   useReanimatedTrueSheet,
 } from '@lodev09/react-native-true-sheet/reanimated';
 import { useCity } from '@/lib/city-context';
-import { useI18n, type Lang } from '@/lib/i18n';
+import { useI18n, type Lang, type Strings } from '@/lib/i18n';
 import { useMapLayers } from '@/lib/map-layers-context';
 import { sheetDetentFraction, useSheetDetent } from '@/lib/sheet-detent-context';
 import { openMapsDirections } from '@/lib/maps';
@@ -39,6 +39,7 @@ import {
   BackHandler,
   Platform,
   Pressable,
+  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -52,6 +53,7 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -814,6 +816,215 @@ const PlaceDetail = React.memo(function PlaceDetail({
   );
 });
 
+// ─── Two-column search layout ─────────────────────────────────────────────────
+
+/** Compact column label — sits above each search column. */
+const ColumnLabel = React.memo(function ColumnLabel({
+  label,
+  icon: IconComp,
+  color,
+  loading,
+}: {
+  label: string;
+  icon: LucideIcon;
+  color: string;
+  loading?: boolean;
+}) {
+  return (
+    <View style={colStyles.colLabelRow} className="rtl:flex-row-reverse">
+      <View style={[colStyles.colLabelIcon, { backgroundColor: `${color}26` }]}>
+        <IconComp size={11} color={color} strokeWidth={2.5} />
+      </View>
+      <Text style={[colStyles.colLabelText, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
+      {loading ? (
+        <ActivityIndicator size="small" color={color} style={colStyles.colLabelSpinner} />
+      ) : null}
+    </View>
+  );
+});
+
+/** Mini section separator inside a column. */
+const ColSectionDivider = React.memo(function ColSectionDivider({
+  label,
+  color,
+}: {
+  label: string;
+  color: string;
+}) {
+  return (
+    <Text style={[colStyles.colSectionLabel, { color }]} numberOfLines={1}>
+      {label}
+    </Text>
+  );
+});
+
+/** Narrow row for two-column search results. */
+const CompactRow = React.memo(function CompactRow({
+  dotColor,
+  dotSquare,
+  name,
+  detail,
+  onPress,
+}: {
+  dotColor: string;
+  dotSquare?: boolean;
+  name: string;
+  detail?: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={colStyles.compactRow} className="active:opacity-55">
+      <View style={[colStyles.compactDot, dotSquare && colStyles.compactDotSquare, { backgroundColor: dotColor }]} />
+      <View style={colStyles.compactTextBlock}>
+        <Text style={colStyles.compactName} numberOfLines={1}>
+          {name}
+        </Text>
+        {detail ? (
+          <Text style={colStyles.compactDetail} numberOfLines={1}>
+            {detail}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+});
+
+/** Pulsing skeleton rows shown while the places API call is in flight. */
+function SkeletonLine({ widthPct }: { widthPct: number }) {
+  return (
+    <View style={[colStyles.compactRow, { gap: 0 }]}>
+      <View style={[colStyles.compactDot, colStyles.compactDotSquare, colStyles.skeletonDot]} />
+      <View style={[colStyles.skeletonLine, { width: `${widthPct}%` }]} />
+    </View>
+  );
+}
+
+const PlaceSkeleton = React.memo(function PlaceSkeleton() {
+  const opacity = useSharedValue(0.7);
+  React.useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(0.25, { duration: 650, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+    return () => {
+      opacity.value = 0.7;
+    };
+  }, [opacity]);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View style={animStyle}>
+      <SkeletonLine widthPct={75} />
+      <SkeletonLine widthPct={60} />
+      <SkeletonLine widthPct={82} />
+      <SkeletonLine widthPct={50} />
+    </Animated.View>
+  );
+});
+
+type SearchColumnsProps = {
+  sections: Section[];
+  places: PlaceResult[];
+  isPlaceLoading: boolean;
+  cityLabel: string;
+  t: Strings;
+  lang: Lang;
+  isRTL: boolean;
+  columnScrollH: number;
+  onStationPress: (station: Station) => void;
+  onBusStopPress: (stop: BusStop, kind: 'brt' | 'bus') => void;
+  onPlacePress: (place: PlaceResult) => void;
+};
+
+const SearchColumns = React.memo(function SearchColumns({
+  sections,
+  places,
+  isPlaceLoading,
+  t,
+  lang,
+  isRTL,
+  columnScrollH,
+  onStationPress,
+  onBusStopPress,
+  onPlacePress,
+}: SearchColumnsProps) {
+  return (
+    <View style={[colStyles.columns, isRTL && colStyles.columnsRTL]}>
+      {/* ── Station column (offline, instant) ─────────────────────────── */}
+      <View style={colStyles.column}>
+        <ColumnLabel label={t.transitColumn} icon={TrainFront} color="#60a5fa" />
+        <ScrollView
+          style={{ height: columnScrollH }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          {sections.length === 0 ? (
+            <Text style={colStyles.colEmpty}>{t.noResults}</Text>
+          ) : (
+            sections.map((section) => (
+              <View key={section.title}>
+                <ColSectionDivider label={section.title} color={section.color} />
+                {section.data.map((item) =>
+                  item.kind === 'metro' ? (
+                    <CompactRow
+                      key={`m-${item.station.id}`}
+                      dotColor={item.station.lineColor}
+                      name={item.station.name[lang]}
+                      detail={item.station.line}
+                      onPress={() => onStationPress(item.station)}
+                    />
+                  ) : (
+                    <CompactRow
+                      key={`${item.kind}-${item.stop.id}`}
+                      dotColor={item.kind === 'brt' ? '#0d9488' : '#64748b'}
+                      dotSquare={item.kind === 'brt'}
+                      name={busStopDisplayName(item.stop, lang)}
+                      detail={item.kind === 'brt' ? item.stop.brtLine || undefined : item.stop.lines || undefined}
+                      onPress={() => onBusStopPress(item.stop, item.kind)}
+                    />
+                  )
+                )}
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Divider */}
+      <View style={colStyles.columnDivider} />
+
+      {/* ── Places column (Nominatim API, debounced) ───────────────────── */}
+      <View style={colStyles.column}>
+        <ColumnLabel label={t.places} icon={MapPin} color="#a78bfa" loading={isPlaceLoading} />
+        <ScrollView
+          style={{ height: columnScrollH }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          {isPlaceLoading && places.length === 0 ? (
+            <PlaceSkeleton />
+          ) : places.length > 0 ? (
+            places.map((place) => (
+              <CompactRow
+                key={place.id}
+                dotColor="#a78bfa"
+                dotSquare
+                name={place.name}
+                detail={place.displayName.split(',').slice(1, 2).join('').trim() || undefined}
+                onPress={() => onPlacePress(place)}
+              />
+            ))
+          ) : !isPlaceLoading ? (
+            <Text style={colStyles.colEmpty}>{t.noPlacesFound}</Text>
+          ) : null}
+        </ScrollView>
+      </View>
+    </View>
+  );
+});
+
 // ─── Search results (categorised) ────────────────────────────────────────────
 type ListItem =
   | { kind: 'metro'; station: Station }
@@ -886,6 +1097,7 @@ const SheetSectionInner = () => {
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
   const peekFraction = minHeight / height;
+  const detentFractions = [minHeight / height, 0.5, 1.0] as const;
 
   const syncMapPadding = React.useCallback(
     (detentIndex: number) => {
@@ -938,13 +1150,28 @@ const SheetSectionInner = () => {
         : `${selected.kind}-${selected.stop.id}`
     : null;
 
-  // Expand only when the user picks a station — not when they collapse to peek (e.g. locate).
+  // Expand when user picks a station or when search becomes active.
   React.useEffect(() => {
     if (selectedKey) {
       handleDetentChange(1);
       sheetRef.current?.resize(1);
     }
   }, [selectedKey, handleDetentChange]);
+
+  React.useEffect(() => {
+    if (hasQuery && !selected && currentDetent < 1) {
+      handleDetentChange(1);
+      sheetRef.current?.resize(1);
+    }
+  }, [hasQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Height available for each column's scroll area, adapts as the sheet is dragged.
+  const COL_LABEL_H = 36; // ColumnLabel height + gap
+  const columnScrollH = React.useMemo(() => {
+    const fraction = detentFractions[Math.min(currentDetent, 2)] ?? 0.5;
+    const sheetH = height * fraction;
+    return Math.max(80, Math.round(sheetH) - HEADER_HEIGHT - SPACING * 2 - COL_LABEL_H - insets.bottom);
+  }, [currentDetent, height, detentFractions, insets.bottom]);
 
   // ── Floating close button ────────────────────────────────────────────────────
   const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
@@ -1032,14 +1259,9 @@ const SheetSectionInner = () => {
 
   const contentStyle = [styles.content, isRTL && styles.contentRTL];
 
-  // Show the scrollable station list only when nothing is selected and the sheet isn't transitioning
-  const showStationList = !selected && !isSheetLoading && (sections.length > 0 || hasQuery);
-
-  // Places section is shown inline below station sections when a query is active
-  const showPlacesSection = hasQuery && !selected && !isSheetLoading;
-
-  const isListEmpty =
-    !selected && !isSheetLoading && sections.length === 0 && !isPlaceLoading && places.length === 0;
+  // In search mode the sheet hosts two independent ScrollViews, so TrueSheet
+  // must NOT wrap content in a native scroll view.
+  const sheetScrollable = !hasQuery && !selected && !isSheetLoading && sections.length > 0;
 
   return (
     <>
@@ -1050,7 +1272,7 @@ const SheetSectionInner = () => {
         initialDetentIndex={0}
         dimmed={false}
         dismissible={false}
-        scrollable={showStationList}
+        scrollable={sheetScrollable}
         scrollableOptions={{ scrollingExpandsSheet: true }}
         style={contentStyle}
         detached
@@ -1091,12 +1313,23 @@ const SheetSectionInner = () => {
           <View style={styles.centered}>
             <ActivityIndicator size="small" color={GRAY} />
           </View>
-        ) : isListEmpty ? (
-          <ListEmptyFallback
-            title={hasQuery ? t.noResults : t.emptyListTitle}
-            hint={hasQuery ? t.noResultsHint : t.emptyListHint}
+        ) : hasQuery ? (
+          /* ── Two-column search results ───────────────────────────────── */
+          <SearchColumns
+            sections={sections}
+            places={places}
+            isPlaceLoading={isPlaceLoading}
+            cityLabel={cityLabel}
+            t={t}
+            lang={lang}
+            isRTL={isRTL}
+            columnScrollH={columnScrollH}
+            onStationPress={handleStationPress}
+            onBusStopPress={handleBusStopPress}
+            onPlacePress={handlePlacePress}
           />
-        ) : (
+        ) : sections.length > 0 ? (
+          /* ── Default single-column station list ──────────────────────── */
           <SectionList
             sections={sections}
             keyExtractor={keyExtractor}
@@ -1114,29 +1347,9 @@ const SheetSectionInner = () => {
             extraData={lang}
             style={styles.list}
             contentContainerStyle={[styles.listContent, { paddingBottom: SPACING + insets.bottom }]}
-            ListFooterComponent={showPlacesSection ? (
-              <View>
-                <CategoryHeader
-                  label={t.places}
-                  icon={MapPin}
-                  color="#a78bfa"
-                  loading={isPlaceLoading}
-                />
-                {places.map((place) => (
-                  <PlaceRow
-                    key={place.id}
-                    place={place}
-                    cityLabel={cityLabel}
-                    typeLabel={t.layerPlace}
-                    onPress={() => handlePlacePress(place)}
-                  />
-                ))}
-                {!isPlaceLoading && places.length === 0 ? (
-                  <Text className="px-2 py-3 text-[12px] text-[#b2bac8]">{t.noPlacesFound}</Text>
-                ) : null}
-              </View>
-            ) : null}
           />
+        ) : (
+          <ListEmptyFallback title={t.emptyListTitle} hint={t.emptyListHint} />
         )}
       </ReanimatedTrueSheet>
 
@@ -1208,4 +1421,114 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { paddingBottom: SPACING },
   centered: { paddingVertical: SPACING, alignItems: 'center' },
+});
+
+// ─── Two-column search styles ─────────────────────────────────────────────────
+const colStyles = StyleSheet.create({
+  // Container row — children in LTR order; isRTL reversal applied via columnsRTL
+  columns: {
+    flexDirection: 'row',
+    gap: 0,
+  },
+  columnsRTL: {
+    flexDirection: 'row-reverse',
+  },
+  column: {
+    flex: 1,
+    minWidth: 0,
+  },
+  columnDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginHorizontal: 8,
+    alignSelf: 'stretch',
+  },
+  // Column header row
+  colLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+    paddingBottom: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.15)',
+  },
+  colLabelIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colLabelText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  colLabelSpinner: {
+    transform: [{ scale: 0.75 }],
+  },
+  // Mini section label inside a column
+  colSectionLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    opacity: 0.65,
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  colEmpty: {
+    paddingVertical: 14,
+    fontSize: 12,
+    color: GRAY,
+    textAlign: 'center',
+  },
+  // Compact row (44px, narrower than StationListRow)
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 7,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+    minHeight: 44,
+  },
+  compactDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  compactDotSquare: {
+    borderRadius: 2,
+  },
+  compactTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  compactName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#ffffff',
+    lineHeight: 17,
+  },
+  compactDetail: {
+    fontSize: 11,
+    color: GRAY,
+    lineHeight: 14,
+    marginTop: 1,
+  },
+  // Skeleton
+  skeletonDot: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginRight: 8,
+  },
+  skeletonLine: {
+    height: 12,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.13)',
+  },
 });
