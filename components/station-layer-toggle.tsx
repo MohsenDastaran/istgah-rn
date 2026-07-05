@@ -2,7 +2,9 @@ import { useI18n } from '@/lib/i18n';
 import { LAYER_KEYS, useMapLayers, type LayerKey } from '@/lib/map-layers-context';
 import { Bus, TrainFront } from 'lucide-react-native';
 import * as React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+
+const COMPACT_WIDTH = 390;
 
 const LAYER_META: Record<
   LayerKey,
@@ -13,20 +15,26 @@ const LAYER_META: Record<
   bus: { icon: Bus, labelKey: 'layerBus' },
 };
 
-const TRACK_RADIUS = 20;
 const ICON_ACTIVE = '#ffffff';
 const ICON_INACTIVE = 'rgba(255, 255, 255, 0.5)';
 
 export function StationLayerToggle() {
   const { t, isRTL } = useI18n();
   const { visibleLayers, toggleLayer } = useMapLayers();
+  const { width } = useWindowDimensions();
+  const compact = width < COMPACT_WIDTH;
   const lastIndex = LAYER_KEYS.length - 1;
 
-  const roundStart = isRTL ? styles.segmentEnd : styles.segmentStart;
-  const roundEnd = isRTL ? styles.segmentStart : styles.segmentEnd;
+  const trackRadius = compact ? 16 : 20;
+  const roundStart = isRTL
+    ? { borderTopRightRadius: trackRadius, borderBottomRightRadius: trackRadius }
+    : { borderTopLeftRadius: trackRadius, borderBottomLeftRadius: trackRadius };
+  const roundEnd = isRTL
+    ? { borderTopLeftRadius: trackRadius, borderBottomLeftRadius: trackRadius }
+    : { borderTopRightRadius: trackRadius, borderBottomRightRadius: trackRadius };
 
   return (
-    <View style={[styles.track, isRTL && styles.trackRTL]}>
+    <View style={[styles.track, compact && styles.trackCompact, isRTL && styles.trackRTL]}>
       {LAYER_KEYS.map((key, index) => {
         const selected = visibleLayers.has(key);
         const prevKey = index > 0 ? LAYER_KEYS[index - 1] : null;
@@ -38,7 +46,9 @@ export function StationLayerToggle() {
 
         return (
           <React.Fragment key={key}>
-            {showDivider ? <View style={styles.divider} /> : null}
+            {showDivider ? (
+              <View style={[styles.divider, compact && styles.dividerCompact]} />
+            ) : null}
             <Pressable
               onPress={() => toggleLayer(key)}
               accessibilityRole="button"
@@ -46,6 +56,7 @@ export function StationLayerToggle() {
               accessibilityLabel={t[LAYER_META[key].labelKey]}
               style={({ pressed }) => [
                 styles.segment,
+                compact && styles.segmentCompact,
                 isFirst && roundStart,
                 isLast && roundEnd,
                 selected && styles.segmentSelected,
@@ -53,11 +64,16 @@ export function StationLayerToggle() {
                 pressed && selected && styles.segmentSelectedPressed,
               ]}>
               <Icon
-                size={15}
+                size={compact ? 13 : 15}
                 color={selected ? ICON_ACTIVE : ICON_INACTIVE}
                 strokeWidth={selected ? 2.75 : 2}
               />
-              <Text style={[styles.label, selected ? styles.labelActive : styles.labelInactive]}>
+              <Text
+                style={[
+                  styles.label,
+                  compact && styles.labelCompact,
+                  selected ? styles.labelActive : styles.labelInactive,
+                ]}>
                 {t[LAYER_META[key].labelKey]}
               </Text>
             </Pressable>
@@ -87,6 +103,10 @@ const styles = StyleSheet.create({
       android: { elevation: 6 },
     }),
   },
+  trackCompact: {
+    borderRadius: 18,
+    padding: 2,
+  },
   trackRTL: {
     flexDirection: 'row-reverse',
   },
@@ -100,13 +120,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  segmentStart: {
-    borderTopLeftRadius: TRACK_RADIUS,
-    borderBottomLeftRadius: TRACK_RADIUS,
-  },
-  segmentEnd: {
-    borderTopRightRadius: TRACK_RADIUS,
-    borderBottomRightRadius: TRACK_RADIUS,
+  segmentCompact: {
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   segmentSelected: {
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
@@ -123,8 +140,14 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
   },
+  dividerCompact: {
+    height: 14,
+  },
   label: {
     fontSize: 13,
+  },
+  labelCompact: {
+    fontSize: 11,
   },
   labelActive: {
     color: '#fff',
