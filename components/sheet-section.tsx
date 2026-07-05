@@ -1281,12 +1281,14 @@ const SheetSectionInner = () => {
         backgroundColor={DARK}
         onDetentChange={(e) => handleDetentChange(e.nativeEvent.index)}
         header={
-          <SheetHeader
-            placeholder={t.search}
-            clearLabel={t.clearSearch}
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-          />
+          !selected ? (
+            <SheetHeader
+              placeholder={t.search}
+              clearLabel={t.clearSearch}
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+            />
+          ) : undefined
         }>
         {selected?.kind === 'metro' ? (
           <StationDetail
