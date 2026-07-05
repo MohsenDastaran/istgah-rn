@@ -52,6 +52,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -512,10 +514,7 @@ const PlaceRow = React.memo(function PlaceRow({
       onPress={onPress}
       className="h-[52px] justify-center border-b border-white/10 active:opacity-60">
       <View className="flex-row items-center gap-3 rtl:flex-row-reverse">
-        <View
-          className="size-[11px] shrink-0 rounded-sm"
-          style={{ backgroundColor: '#a78bfa' }}
-        />
+        <View className="size-[11px] shrink-0 rounded-sm" style={{ backgroundColor: '#a78bfa' }} />
         <View className="min-w-0 flex-1 rtl:items-end">
           <Text className="text-sm font-medium text-white" numberOfLines={1}>
             {place.name}
@@ -529,7 +528,10 @@ const PlaceRow = React.memo(function PlaceRow({
         <View className="max-w-[38%] shrink-0 items-end gap-0.5 rtl:items-start">
           <View className="flex-row items-center gap-1 rtl:flex-row-reverse">
             <TypeIcon size={12} color={typeColor} strokeWidth={2.5} />
-            <Text className="text-[11px] font-semibold" style={{ color: typeColor }} numberOfLines={1}>
+            <Text
+              className="text-[11px] font-semibold"
+              style={{ color: typeColor }}
+              numberOfLines={1}>
               {typeLabel}
             </Text>
           </View>
@@ -752,7 +754,16 @@ const PlaceDetail = React.memo(function PlaceDetail({
   onBackToList: () => void;
 }) {
   const { t } = useI18n();
-  const { route, routeDistance, routeDuration, routeLoading, userLocation, fetchRoute, clearRoute, locateUser } = useStations();
+  const {
+    route,
+    routeDistance,
+    routeDuration,
+    routeLoading,
+    userLocation,
+    fetchRoute,
+    clearRoute,
+    locateUser,
+  } = useStations();
 
   const handleDirections = async () => {
     await fetchRoute();
@@ -875,7 +886,13 @@ const CompactRow = React.memo(function CompactRow({
 }) {
   return (
     <Pressable onPress={onPress} style={colStyles.compactRow} className="active:opacity-55">
-      <View style={[colStyles.compactDot, dotSquare && colStyles.compactDotSquare, { backgroundColor: dotColor }]} />
+      <View
+        style={[
+          colStyles.compactDot,
+          dotSquare && colStyles.compactDotSquare,
+          { backgroundColor: dotColor },
+        ]}
+      />
       <View style={colStyles.compactTextBlock}>
         <Text style={colStyles.compactName} numberOfLines={1}>
           {name}
@@ -928,6 +945,8 @@ const PlaceSkeleton = React.memo(function PlaceSkeleton() {
   );
 });
 
+const COL_LABEL_H = 36;
+
 type SearchColumnsProps = {
   sections: Section[];
   places: PlaceResult[];
@@ -935,7 +954,8 @@ type SearchColumnsProps = {
   t: Strings;
   lang: Lang;
   isRTL: boolean;
-  columnScrollH: number;
+  /** Total height of the two-column block (labels + scroll areas). */
+  bodyHeight: number;
   onStationPress: (station: Station) => void;
   onBusStopPress: (stop: BusStop, kind: 'brt' | 'bus') => void;
   onPlacePress: (place: PlaceResult) => void;
@@ -948,21 +968,25 @@ const SearchColumns = React.memo(function SearchColumns({
   t,
   lang,
   isRTL,
-  columnScrollH,
+  bodyHeight,
   onStationPress,
   onBusStopPress,
   onPlacePress,
 }: SearchColumnsProps) {
+  const scrollH = Math.max(80, bodyHeight - COL_LABEL_H);
+
   return (
-    <View style={[colStyles.columns, isRTL && colStyles.columnsRTL]}>
+    <View style={[colStyles.columns, { height: bodyHeight }, isRTL && colStyles.columnsRTL]}>
       {/* ── Station column (offline, instant) ─────────────────────────── */}
       <View style={colStyles.column}>
         <ColumnLabel label={t.transitColumn} icon={TrainFront} color="#60a5fa" />
         <ScrollView
-          style={{ height: columnScrollH }}
+          style={{ height: scrollH }}
+          contentContainerStyle={colStyles.columnScrollContent}
           nestedScrollEnabled
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}>
           {sections.length === 0 ? (
             <Text style={colStyles.colEmpty}>{t.noResults}</Text>
           ) : (
@@ -985,7 +1009,11 @@ const SearchColumns = React.memo(function SearchColumns({
                       dotColor={item.kind === 'brt' ? '#0d9488' : '#64748b'}
                       dotSquare={item.kind === 'brt'}
                       name={busStopDisplayName(item.stop, lang)}
-                      detail={item.kind === 'brt' ? item.stop.brtLine || undefined : item.stop.lines || undefined}
+                      detail={
+                        item.kind === 'brt'
+                          ? item.stop.brtLine || undefined
+                          : item.stop.lines || undefined
+                      }
                       cityLabel={cityLabelFromName(item.stop.city, lang)}
                       onPress={() => onBusStopPress(item.stop, item.kind)}
                     />
@@ -1004,10 +1032,12 @@ const SearchColumns = React.memo(function SearchColumns({
       <View style={colStyles.column}>
         <ColumnLabel label={t.places} icon={MapPin} color="#a78bfa" loading={isPlaceLoading} />
         <ScrollView
-          style={{ height: columnScrollH }}
+          style={{ height: scrollH }}
+          contentContainerStyle={colStyles.columnScrollContent}
           nestedScrollEnabled
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}>
           {isPlaceLoading && places.length === 0 ? (
             <PlaceSkeleton />
           ) : places.length > 0 ? (
@@ -1037,7 +1067,10 @@ type ListItem =
   | { kind: 'brt'; stop: BusStop }
   | { kind: 'bus'; stop: BusStop };
 
-type Section = SectionListData<ListItem, { title: string; icon: LucideIcon; color: string; loading?: boolean }>;
+type Section = SectionListData<
+  ListItem,
+  { title: string; icon: LucideIcon; color: string; loading?: boolean }
+>;
 
 // ─── Inner ────────────────────────────────────────────────────────────────────
 const SheetSectionInner = () => {
@@ -1101,7 +1134,6 @@ const SheetSectionInner = () => {
   // ── Sheet expand / collapse ──────────────────────────────────────────────────
   const minHeight = HEADER_HEIGHT + Platform.select({ ios: 0, default: SPACING })!;
   const peekFraction = minHeight / height;
-  const detentFractions = [minHeight / height, 0.5, 1.0] as const;
 
   const syncMapPadding = React.useCallback(
     (detentIndex: number) => {
@@ -1169,13 +1201,38 @@ const SheetSectionInner = () => {
     }
   }, [hasQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Height available for each column's scroll area, adapts as the sheet is dragged.
-  const COL_LABEL_H = 36; // ColumnLabel height + gap
-  const columnScrollH = React.useMemo(() => {
-    const fraction = detentFractions[Math.min(currentDetent, 2)] ?? 0.5;
-    const sheetH = height * fraction;
-    return Math.max(80, Math.round(sheetH) - HEADER_HEIGHT - SPACING * 2 - COL_LABEL_H - insets.bottom);
-  }, [currentDetent, height, detentFractions, insets.bottom]);
+  const searchBodyHeightRef = React.useRef(
+    Math.max(160, Math.round(height * 0.5) - HEADER_HEIGHT - SPACING * 2)
+  );
+  const [searchBodyHeight, setSearchBodyHeight] = React.useState(searchBodyHeightRef.current);
+
+  const syncSearchBodyHeight = React.useCallback(
+    (sheetTop: number) => {
+      const detached = insets.bottom + SPACING;
+      const visible = height - sheetTop - detached;
+      const next = Math.max(160, Math.round(visible - HEADER_HEIGHT - SPACING * 2));
+      if (Math.abs(next - searchBodyHeightRef.current) < 2) return;
+      searchBodyHeightRef.current = next;
+      setSearchBodyHeight(next);
+    },
+    [height, insets.bottom]
+  );
+
+  useAnimatedReaction(
+    () => animatedPosition.value,
+    (sheetTop) => {
+      if (hasQuery) {
+        runOnJS(syncSearchBodyHeight)(sheetTop);
+      }
+    },
+    [hasQuery, syncSearchBodyHeight]
+  );
+
+  React.useEffect(() => {
+    if (hasQuery) {
+      syncSearchBodyHeight(animatedPosition.value);
+    }
+  }, [hasQuery, currentDetent, syncSearchBodyHeight, animatedPosition]);
 
   // ── Floating close button ────────────────────────────────────────────────────
   const floatingOpacity = useSharedValue(currentDetent === 1 ? 1 : 0);
@@ -1220,7 +1277,12 @@ const SheetSectionInner = () => {
   // ── Renderers ────────────────────────────────────────────────────────────────
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: Section }) => (
-      <CategoryHeader label={section.title} icon={section.icon} color={section.color} loading={section.loading} />
+      <CategoryHeader
+        label={section.title}
+        icon={section.icon}
+        color={section.color}
+        loading={section.loading}
+      />
     ),
     []
   );
@@ -1259,7 +1321,11 @@ const SheetSectionInner = () => {
     []
   );
 
-  const contentStyle = [styles.content, isRTL && styles.contentRTL];
+  const contentStyle = [
+    styles.content,
+    isRTL && styles.contentRTL,
+    hasQuery && !selected && styles.searchSheetContent,
+  ];
 
   // In search mode the sheet hosts two independent ScrollViews, so TrueSheet
   // must NOT wrap content in a native scroll view.
@@ -1308,29 +1374,27 @@ const SheetSectionInner = () => {
             onBackToList={handleBackToList}
           />
         ) : selected?.kind === 'place' ? (
-          <PlaceDetail
-            place={selected.place}
-            sheetRef={sheetRef}
-            onBackToList={handleBackToList}
-          />
+          <PlaceDetail place={selected.place} sheetRef={sheetRef} onBackToList={handleBackToList} />
         ) : isSheetLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="small" color={GRAY} />
           </View>
         ) : hasQuery ? (
           /* ── Two-column search results ───────────────────────────────── */
-          <SearchColumns
-            sections={sections}
-            places={places}
-            isPlaceLoading={isPlaceLoading}
-            t={t}
-            lang={lang}
-            isRTL={isRTL}
-            columnScrollH={columnScrollH}
-            onStationPress={handleStationPress}
-            onBusStopPress={handleBusStopPress}
-            onPlacePress={handlePlacePress}
-          />
+          <View style={styles.searchHost}>
+            <SearchColumns
+              sections={sections}
+              places={places}
+              isPlaceLoading={isPlaceLoading}
+              t={t}
+              lang={lang}
+              isRTL={isRTL}
+              bodyHeight={searchBodyHeight}
+              onStationPress={handleStationPress}
+              onBusStopPress={handleBusStopPress}
+              onPlacePress={handlePlacePress}
+            />
+          </View>
         ) : sections.length > 0 ? (
           /* ── Default single-column station list ──────────────────────── */
           <SectionList
@@ -1421,6 +1485,14 @@ const styles = StyleSheet.create({
   },
   content: { padding: SPACING, gap: GAP },
   contentRTL: { direction: 'rtl' },
+  searchSheetContent: {
+    flex: 1,
+    minHeight: 0,
+  },
+  searchHost: {
+    flex: 1,
+    minHeight: 0,
+  },
   list: { flex: 1 },
   listContent: { paddingBottom: SPACING },
   centered: { paddingVertical: SPACING, alignItems: 'center' },
@@ -1439,6 +1511,10 @@ const colStyles = StyleSheet.create({
   column: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
+  },
+  columnScrollContent: {
+    paddingBottom: 8,
   },
   columnDivider: {
     width: StyleSheet.hairlineWidth,
