@@ -10,6 +10,7 @@ import { ThemeProvider } from 'expo-router/react-navigation';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
 
 export {
@@ -20,20 +21,22 @@ export default function RootLayout() {
   const { theme } = useUniwind();
 
   return (
-    <I18nProvider>
-      <CityProvider>
-        <MapLayersProvider>
-          <StationsProvider>
-            <SheetDetentProvider>
-              <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-                <StatusBar style="light" />
-                <Stack />
-                <PortalHost />
-              </ThemeProvider>
-            </SheetDetentProvider>
-          </StationsProvider>
-        </MapLayersProvider>
-      </CityProvider>
-    </I18nProvider>
+    <SafeAreaProvider>
+      <I18nProvider>
+        <CityProvider>
+          <MapLayersProvider>
+            <StationsProvider>
+              <SheetDetentProvider>
+                <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+                  <StatusBar style="light" />
+                  <Stack />
+                  <PortalHost />
+                </ThemeProvider>
+              </SheetDetentProvider>
+            </StationsProvider>
+          </MapLayersProvider>
+        </CityProvider>
+      </I18nProvider>
+    </SafeAreaProvider>
   );
 }

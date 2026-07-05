@@ -33,6 +33,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -294,6 +295,7 @@ function MapControls({
   onLocate,
 }: MapControlsProps) {
   const { cameraRef, mapRef, bearing } = useMap();
+  const insets = useSafeAreaInsets();
   const [isLocating, setIsLocating] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -344,10 +346,10 @@ function MapControls({
   const isDark = theme === 'dark';
 
   const positionStyle = {
-    'top-left': { top: 8, left: 8 },
-    'top-right': { top: 8, right: 8 },
-    'bottom-left': { bottom: 140, left: 20 },
-    'bottom-right': { bottom: 140, right: 20 },
+    'top-left': { top: 8 + insets.top, left: 8 },
+    'top-right': { top: 8 + insets.top, right: 8 },
+    'bottom-left': { bottom: 140 + insets.bottom, left: 20 },
+    'bottom-right': { bottom: 140 + insets.bottom, right: 20 },
   }[position];
 
   const cardStyle = [controlStyles.card, isDark ? controlStyles.cardDark : controlStyles.cardLight];

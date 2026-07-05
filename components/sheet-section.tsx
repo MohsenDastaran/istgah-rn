@@ -43,6 +43,7 @@ import {
   useWindowDimensions,
   type SectionListData,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -694,6 +695,7 @@ const DEBOUNCE_MS = 300;
 // ─── Inner ────────────────────────────────────────────────────────────────────
 const SheetSectionInner = () => {
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { animatedPosition } = useReanimatedTrueSheet();
   const sheetRef = React.useRef<TrueSheet>(null);
   const [currentDetent, setCurrentDetent] = React.useState(0);
@@ -900,6 +902,8 @@ const SheetSectionInner = () => {
         scrollableOptions={{ scrollingExpandsSheet: true }}
         style={contentStyle}
         detached
+        detachedOffset={insets.bottom + SPACING}
+        insetAdjustment="automatic"
         backgroundColor={DARK}
         onDetentChange={(e) => handleDetentChange(e.nativeEvent.index)}
         header={
@@ -951,7 +955,7 @@ const SheetSectionInner = () => {
             showsVerticalScrollIndicator={false}
             extraData={lang}
             style={styles.list}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: SPACING + insets.bottom }]}
           />
         )}
       </ReanimatedTrueSheet>
@@ -963,11 +967,15 @@ const SheetSectionInner = () => {
         <Pressable
           disabled={currentDetent !== 1}
           className={cn(
-            'absolute bottom-4 size-12 items-center justify-center rounded-full active:opacity-60',
+            'absolute size-12 items-center justify-center rounded-full active:opacity-60',
             'right-4 rtl:right-auto rtl:left-4',
             Platform.OS === 'android' && 'elevation-8'
           )}
-          style={({ pressed }) => [styles.floatingBtn, pressed && styles.floatingBtnPressed]}
+          style={({ pressed }) => [
+            styles.floatingBtn,
+            { bottom: insets.bottom },
+            pressed && styles.floatingBtnPressed,
+          ]}
           onPress={handleSheetClose}
           accessibilityRole="button"
           accessibilityLabel={t.closeSheet}

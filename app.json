@@ -20,6 +20,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.mohsendastaran.istgah",
+      "edgeToEdgeEnabled": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"

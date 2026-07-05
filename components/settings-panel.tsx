@@ -37,7 +37,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Platform, Pressable, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Uniwind, useUniwind } from 'uniwind';
 
@@ -206,7 +206,7 @@ export function SettingsPanel() {
 
   const contentInsets = {
     top: insets.top,
-    bottom: Platform.select({ ios: insets.bottom, android: insets.bottom + 24 }) ?? 0,
+    bottom: insets.bottom + 16,
     left: 16,
     right: 16,
   };
