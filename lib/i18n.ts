@@ -240,8 +240,8 @@ type I18nContextValue = {
 const I18nContext = React.createContext<I18nContextValue | null>(null);
 
 function readLocaleFromIntl(): DeviceLocale {
-  const languageTag = Intl.DateTimeFormat().resolvedOptions().locale ?? 'en';
-  const languageCode = languageTag.split('-')[0]?.toLowerCase() ?? 'en';
+  const languageTag = Intl.DateTimeFormat().resolvedOptions().locale ?? 'fa';
+  const languageCode = languageTag.split('-')[0]?.toLowerCase() ?? 'fa';
 
   return {
     languageCode,
@@ -255,7 +255,7 @@ function readDeviceLocale(): DeviceLocale {
   if (localization?.getLocales) {
     try {
       const locale = localization.getLocales()[0];
-      const languageCode = locale?.languageCode ?? 'en';
+      const languageCode = locale?.languageCode ?? 'fa';
       const textDirection =
         locale?.textDirection ?? (RTL_LANGUAGES.has(languageCode) ? 'rtl' : 'ltr');
 
@@ -269,7 +269,7 @@ function readDeviceLocale(): DeviceLocale {
 }
 
 function deviceLocaleToLang(locale: DeviceLocale): Lang {
-  return locale.languageCode === 'fa' ? 'fa' : 'en';
+  return locale.languageCode === 'en' ? 'en' : 'fa';
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
