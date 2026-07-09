@@ -147,6 +147,7 @@ function BasemapToggle({
           );
         })}
       </View>
+      <Text className="text-muted-foreground text-[10px] leading-snug">{t.satelliteVpnNote}</Text>
     </View>
   );
 }

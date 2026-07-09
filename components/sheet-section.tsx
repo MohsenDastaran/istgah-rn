@@ -862,11 +862,13 @@ const ColumnLabel = React.memo(function ColumnLabel({
   icon: IconComp,
   color,
   loading,
+  hint,
 }: {
   label: string;
   icon: LucideIcon;
   color: string;
   loading?: boolean;
+  hint?: string;
 }) {
   return (
     <View style={colStyles.colLabelRow} className="rtl:flex-row-reverse">
@@ -876,6 +878,11 @@ const ColumnLabel = React.memo(function ColumnLabel({
       <Text style={[colStyles.colLabelText, { color }]} numberOfLines={1}>
         {label}
       </Text>
+      {hint ? (
+        <Text style={colStyles.colLabelHint} numberOfLines={2}>
+          {hint}
+        </Text>
+      ) : null}
       {loading ? (
         <ActivityIndicator size="small" color={color} style={colStyles.colLabelSpinner} />
       ) : null}
@@ -1078,6 +1085,7 @@ const SearchColumns = React.memo(function SearchColumns({
       <View style={colStyles.column}>
         <ColumnLabel
           label={t.places}
+          hint={t.placeSearchVpnNote}
           icon={MapPin}
           color="#a78bfa"
           loading={isPlaceSearching || isTransitSearching}
@@ -1571,11 +1579,16 @@ const colStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   colLabelText: {
-    flex: 1,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
+  },
+  colLabelHint: {
+    flex: 1,
+    fontSize: 9,
+    lineHeight: 12,
+    color: 'rgba(255,255,255,0.45)',
   },
   colLabelSpinner: {
     transform: [{ scale: 0.75 }],

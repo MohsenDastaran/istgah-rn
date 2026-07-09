@@ -63,6 +63,7 @@ const translations = {
     mapStyle: 'Map style',
     basemapStreet: 'Street',
     basemapSatellite: 'Satellite',
+    satelliteVpnNote: 'Satellite view loads online tiles — may need VPN inside Iran.',
     reportIssue: 'Report an Issue',
     reportIssueDescription:
       'Found a bug, a missing station or stop, or want to suggest a feature? You can report it directly on GitHub.',
@@ -96,6 +97,7 @@ const translations = {
     layerPlace: 'Place',
     noPlacesFound: 'No places found',
     placeSearchHint: 'Search for addresses and landmarks',
+    placeSearchVpnNote: 'Online — may need VPN inside Iran',
     transitColumn: 'Transit Stations',
     nextArrivalBus: 'When is the next bus arriving?',
     nextArrivalBrt: 'When is the next BRT arriving?',
@@ -163,6 +165,7 @@ const translations = {
     mapStyle: 'نمای نقشه',
     basemapStreet: 'خیابانی',
     basemapSatellite: 'ماهواره‌ای',
+    satelliteVpnNote: 'نمای ماهواره‌ای ممکن است به VPN نیاز داشته باشد.',
     reportIssue: 'گزارش مشکل',
     reportIssueDescription:
       'باگ دیدید، ایستگاهی روی نقشه نیست، یا پیشنهادی دارید؟ می‌توانید مستقیماً در گیت‌هاب گزارش دهید.',
@@ -196,6 +199,7 @@ const translations = {
     layerPlace: 'مکان',
     noPlacesFound: 'مکانی یافت نشد',
     placeSearchHint: 'جستجوی آدرس و مکان',
+    placeSearchVpnNote: 'ممکن است به VPN نیاز باشد',
     transitColumn: 'ایستگاه‌های حمل‌ونقل عمومی ',
     nextArrivalBus: 'اتوبوس بعدی کی می‌رسد؟',
     nextArrivalBrt: 'اتوبوس بعدی کی می‌رسد؟',
