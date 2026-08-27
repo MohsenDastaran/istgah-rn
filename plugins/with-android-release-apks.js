@@ -59,12 +59,19 @@ function withAndroidReleaseApks(config) {
 
     contents = contents.replace(
       /versionCode\s+\d+/,
-      'versionCode (findProperty("versionCode") ?: "1") as int'
+      'versionCode istgahVersionCode'
     );
     contents = contents.replace(
       /versionName\s+"[^"]+"/,
-      'versionName findProperty("versionName") ?: "1.0.1"'
+      'versionName istgahVersionName'
     );
+
+    if (!contents.includes('istgahVersionCode =')) {
+      contents = contents.replace(
+        /def jscFlavor = '[^']+'\n/,
+        `$&\ndef istgahVersionCode = (project.findProperty("istgahVersionCode") ?: "1").toString().toInteger()\ndef istgahVersionName = (project.findProperty("istgahVersionName") ?: "1.0.1").toString()\n`
+      );
+    }
 
     if (!contents.includes('universalApk true')) {
       contents = contents.replace(/(\n    signingConfigs \{)/, `\n${SPLITS_BLOCK}$1`);

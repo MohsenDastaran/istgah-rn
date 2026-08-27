@@ -87,6 +87,9 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def istgahVersionCode = (project.findProperty("istgahVersionCode") ?: "1").toString().toInteger()
+def istgahVersionName = (project.findProperty("istgahVersionName") ?: "1.0.1").toString()
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -98,8 +101,8 @@ android {
         applicationId 'com.mohsendastaran.istgah'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode (findProperty("versionCode") ?: "1") as int
-        versionName findProperty("versionName") ?: "1.0.1"
+        versionCode istgahVersionCode
+        versionName istgahVersionName
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

@@ -178,8 +178,8 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
-            -PversionName="$VERSION" \
-            -PversionCode="$VERSION_CODE"
+            -PistgahVersionName="$VERSION" \
+            -PistgahVersionCode="$VERSION_CODE"
 
       - name: Rename and upload APKs
         env:
