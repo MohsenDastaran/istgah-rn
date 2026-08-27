@@ -1,0 +1,356 @@
+# Build Android APKs and attach them to the GitHub Release.
+#
+# Trigger:
+#   - Publish a GitHub Release (release published), or
+#   - Actions → Release → Run workflow (pick an existing tag like v1.0.1)
+#
+# Assets (sort key sits after the tag version so GitHub lists them in a stable order):
+#   istgah_X.Y.Z_01-android-arm64.apk
+#   istgah_X.Y.Z_01-android-armv7.apk
+#   istgah_X.Y.Z_01-android-universal.apk
+#   istgah_X.Y.Z_01-android-x86.apk
+#   istgah_X.Y.Z_01-android-x86_64.apk
+#
+# download-table then writes an OS/Arch badge table into the release body.
+# Version in filenames comes from the release tag (e.g. v1.0.1 → 1.0.1).
+#
+# Optional repo secrets for Play/sideload signing (Settings → Secrets → Actions):
+#   ANDROID_KEY_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# If those are missing, the APKs are signed with a generated debug keystore.
+
+name: Release
+
+run-name: ${{ github.event.release.name || github.event.inputs.tag || github.workflow }}
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build (e.g. v1.0.1)
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+      version_code: ${{ steps.resolve.outputs.version_code }}
+      release_id: ${{ steps.resolve.outputs.release_id }}
+    steps:
+      - name: Resolve release
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_ID_FROM_EVENT: ${{ github.event.release.id }}
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "release" ]; then
+            TAG="$RELEASE_TAG"
+            RELEASE_ID="$RELEASE_ID_FROM_EVENT"
+          else
+            TAG="${DISPATCH_TAG#"${DISPATCH_TAG%%[![:space:]]*}"}"
+            TAG="${TAG%"${TAG##*[![:space:]]}"}"
+            if [ -z "$TAG" ]; then
+              echo "::error::workflow_dispatch requires inputs.tag"
+              exit 1
+            fi
+            RELEASE_ID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq .id)
+          fi
+          VERSION="${TAG#v}"
+          VERSION="${VERSION#V}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Tag must look like vX.Y.Z (got tag=${TAG}, version=${VERSION})"
+            exit 1
+          fi
+          CORE="${VERSION%%[-+]*}"
+          IFS=. read -r MAJ MIN PAT <<< "$CORE"
+          VERSION_CODE=$((10#$MAJ * 10000 + 10#$MIN * 100 + 10#$PAT))
+          {
+            echo "tag=${TAG}"
+            echo "version=${VERSION}"
+            echo "version_code=${VERSION_CODE}"
+            echo "release_id=${RELEASE_ID}"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG} version=${VERSION} version_code=${VERSION_CODE} release_id=${RELEASE_ID}"
+
+  build-android:
+    needs: meta
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Sync version from release tag
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          bun -e '
+            const fs = require("fs");
+            const version = process.env.VERSION;
+            if (!version) throw new Error("VERSION env is empty");
+
+            const pkgPath = "package.json";
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+            pkg.version = version;
+            fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+
+            const appPath = "app.json";
+            const app = JSON.parse(fs.readFileSync(appPath, "utf8"));
+            if (app.expo) app.expo.version = version;
+            fs.writeFileSync(appPath, JSON.stringify(app, null, 2) + "\n");
+            console.log("Synced package.json and app.json → " + version);
+          '
+
+      - name: Setup Android signing
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -n "${ANDROID_KEY_BASE64:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
+            echo "$ANDROID_KEY_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
+            {
+              echo "keyAlias=$ANDROID_KEY_ALIAS"
+              echo "password=$ANDROID_KEY_PASSWORD"
+              echo "keyPassword=$ANDROID_KEY_PASSWORD"
+              echo "storePassword=${ANDROID_STORE_PASSWORD:-$ANDROID_KEY_PASSWORD}"
+              echo "storeFile=$RUNNER_TEMP/keystore.jks"
+            } > android/keystore.properties
+            echo "Using ANDROID_KEY_* secrets for release signing."
+          else
+            echo "::warning::ANDROID_KEY_* secrets are not set; signing APKs with a debug keystore."
+            if [ ! -f android/app/debug.keystore ]; then
+              keytool -genkeypair -v -storetype JKS \
+                -keystore android/app/debug.keystore \
+                -alias androiddebugkey \
+                -storepass android -keypass android \
+                -dname "CN=Android Debug,O=Android,C=US" \
+                -keyalg RSA -keysize 2048 -validity 10000
+            fi
+          fi
+
+      - name: Build release APKs
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          VERSION_CODE: ${{ needs.meta.outputs.version_code }}
+        working-directory: android
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            --no-daemon \
+            -PversionName="$VERSION" \
+            -PversionCode="$VERSION_CODE"
+
+      - name: Rename and upload APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          OUT="android/app/build/outputs/apk/release"
+          DIST="$RUNNER_TEMP/apk-dist"
+          mkdir -p "$DIST"
+
+          declare -A MAP=(
+            ["app-arm64-v8a-release.apk"]="istgah_${VERSION}_01-android-arm64.apk"
+            ["app-armeabi-v7a-release.apk"]="istgah_${VERSION}_01-android-armv7.apk"
+            ["app-x86_64-release.apk"]="istgah_${VERSION}_01-android-x86_64.apk"
+            ["app-x86-release.apk"]="istgah_${VERSION}_01-android-x86.apk"
+            ["app-universal-release.apk"]="istgah_${VERSION}_01-android-universal.apk"
+          )
+
+          FILES=()
+          for src in "${!MAP[@]}"; do
+            if [ ! -f "$OUT/$src" ]; then
+              echo "::error::Missing APK $OUT/$src"
+              ls -la "$OUT" || true
+              exit 1
+            fi
+            cp "$OUT/$src" "$DIST/${MAP[$src]}"
+            FILES+=("$DIST/${MAP[$src]}")
+            echo "Prepared ${MAP[$src]} ($(du -h "$DIST/${MAP[$src]}" | cut -f1))"
+          done
+
+          gh release upload "$TAG" "${FILES[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+
+  download-table:
+    needs: [meta, build-android]
+    if: ${{ always() && !cancelled() && needs.meta.result == 'success' && needs.build-android.result == 'success' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Write OS / Arch download table
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.meta.outputs.release_id }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          cat > "$RUNNER_TEMP/release-download-table.js" <<'BUN'
+          const token = process.env.GITHUB_TOKEN
+          const releaseId = process.env.RELEASE_ID
+          const tag = process.env.TAG
+          const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/")
+
+          const MARKER_START = "<!-- download-table:start -->"
+          const MARKER_END = "<!-- download-table:end -->"
+
+          async function gh(path, { method = "GET", body } = {}) {
+            const res = await fetch(`https://api.github.com${path}`, {
+              method,
+              headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "X-GitHub-Api-Version": "2022-11-28",
+                ...(body ? { "Content-Type": "application/json" } : {}),
+              },
+              body: body ? JSON.stringify(body) : undefined,
+            })
+            if (!res.ok) {
+              throw new Error(`${method} ${path} → ${res.status} ${await res.text()}`)
+            }
+            return res.status === 204 ? null : res.json()
+          }
+
+          function lower(name) {
+            return name.toLowerCase()
+          }
+
+          function archLabel(name) {
+            const n = lower(name)
+            if (n.includes("universal")) return "APK | Universal"
+            if (/aarch64|arm64/.test(n)) return "APK | ARMv8"
+            if (/armv7|armeabi/.test(n)) return "APK | ARMv7"
+            if (/x86_64|amd64|x64/.test(n)) return "APK | x86_64"
+            if (/\bx86\b/.test(n)) return "APK | x86"
+            return "APK"
+          }
+
+          function sortScore(name) {
+            const n = lower(name)
+            if (n.includes("universal")) return 0
+            if (/aarch64|arm64/.test(n)) return 1
+            if (/armv7|armeabi/.test(n)) return 2
+            if (/x86_64|amd64|x64/.test(n)) return 3
+            if (/\bx86\b/.test(n)) return 4
+            return 5
+          }
+
+          function shield({ label, message, color, labelColor, logo, logoColor = "white" }) {
+            const q = new URLSearchParams({ label, message, color, logo, logoColor })
+            if (labelColor) q.set("labelColor", labelColor)
+            return `https://img.shields.io/static/v1?${q.toString()}`
+          }
+
+          function badge(asset) {
+            const message = archLabel(asset.name)
+            const src = shield({
+              label: "Android",
+              message,
+              color: "3DDC84",
+              labelColor: "1B5E20",
+              logo: "android",
+            })
+            const alt = `Android ${message}`
+            return `<a href="${asset.browser_download_url}"><img alt="${alt}" src="${src}" /></a>`
+          }
+
+          const release = await gh(`/repos/${owner}/${repo}/releases/${releaseId}`)
+          const assets = await gh(
+            `/repos/${owner}/${repo}/releases/${releaseId}/assets?per_page=100`
+          )
+
+          const androidApks = assets
+            .filter((a) => lower(a.name).endsWith(".apk"))
+            .sort((a, b) => sortScore(a.name) - sortScore(b.name))
+
+          if (!androidApks.length) {
+            console.log("No APK assets found; leaving release body unchanged.")
+            process.exit(0)
+          }
+
+          const badges = androidApks.map(badge).join(" ")
+          const table = [
+            "## Downloads",
+            "",
+            "Most phones should use **ARMv8**. Universal works on every device but is larger.",
+            "",
+            "<table>",
+            "<thead><tr><th align=\"left\">OS / Arch</th><th align=\"left\">Compatibility</th></tr></thead>",
+            "<tbody>",
+            `<tr><td>${badges}</td><td>Android 7.0 or later<br>arm64, armeabi-v7a, x86_64, x86</td></tr>`,
+            "</tbody>",
+            "</table>",
+          ].join("\n")
+
+          const block = `${MARKER_START}\n${table}\n${MARKER_END}`
+          const existing = release.body || ""
+          let next
+          if (existing.includes(MARKER_START) && existing.includes(MARKER_END)) {
+            next = existing.replace(
+              new RegExp(`${MARKER_START}[\\s\\S]*?${MARKER_END}`),
+              block
+            )
+          } else {
+            const trimmed = existing.trim()
+            next = trimmed ? `${block}\n\n${trimmed}` : block
+          }
+
+          if (next === existing) {
+            console.log("Release download table already up to date.")
+            process.exit(0)
+          }
+
+          await gh(`/repos/${owner}/${repo}/releases/${releaseId}`, {
+            method: "PATCH",
+            body: { body: next },
+          })
+          console.log(`Updated download table on ${tag} (${androidApks.length} APK(s)).`)
+          BUN
+          bun "$RUNNER_TEMP/release-download-table.js"
