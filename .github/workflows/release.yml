@@ -316,8 +316,33 @@ jobs:
           }
 
           const badges = androidApks.map(badge).join(" ")
+
+          const cafeBazaarUrl =
+            "http://cafebazaar.ir/app/?id=com.mohsendastaran.istgah&ref=share"
+          const myketUrl = "https://myket.ir/app/com.mohsendastaran.istgah"
+          const cafeBazaarBadge = `<a href="${cafeBazaarUrl}"><img alt="Cafe Bazaar" src="${shield(
+            {
+              label: "Cafe Bazaar",
+              message: "Get it",
+              color: "00A651",
+              labelColor: "0B5D36",
+              logo: "android",
+            }
+          )}" /></a>`
+          const myketBadge = `<a href="${myketUrl}"><img alt="Myket" src="${shield(
+            {
+              label: "Myket",
+              message: "Get it",
+              color: "5B4CFF",
+              labelColor: "3D2FBF",
+              logo: "android",
+            }
+          )}" /></a>`
+
           const table = [
             "## Downloads",
+            "",
+            `${cafeBazaarBadge} ${myketBadge} — Iranian app stores.`,
             "",
             "Most phones should use **ARMv8**. Universal works on every device but is larger.",
             "",

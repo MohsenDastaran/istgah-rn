@@ -9,10 +9,14 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![MapLibre](https://img.shields.io/badge/MapLibre-GL-396EB2)](https://maplibre.org)
 
+[![بازار](https://img.shields.io/badge/Cafe%20Bazaar-%D8%AF%D8%A7%D9%86%D9%84%D9%88%D8%AF-00A651)](http://cafebazaar.ir/app/?id=com.mohsendastaran.istgah&ref=share)
+[![مایکت](https://img.shields.io/badge/Myket-%D8%AF%D8%A7%D9%86%D9%84%D9%88%D8%AF-5B4CFF)](https://myket.ir/app/com.mohsendastaran.istgah)
+
 ---
 
 ## فهرست مطالب
 
+- [دانلود](#دانلود)
 - [درباره](#درباره)
 - [ویژگی‌ها](#ویژگی‌ها)
 - [پیش‌نیازها](#پیش‌نیازها)
@@ -24,6 +28,15 @@
 - [فناوری‌ها](#فناوری‌ها)
 - [مشارکت](#مشارکت)
 - [مجوز](#مجوز)
+
+---
+
+## دانلود
+
+از فروشگاه‌های اندروید ایرانی نصب کنید:
+
+- [بازار (Cafe Bazaar)](http://cafebazaar.ir/app/?id=com.mohsendastaran.istgah&ref=share)
+- [مایکت (Myket)](https://myket.ir/app/com.mohsendastaran.istgah)
 
 ---
 
@@ -251,10 +264,14 @@ flowchart TB
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![MapLibre](https://img.shields.io/badge/MapLibre-GL-396EB2)](https://maplibre.org)
 
+[![Cafe Bazaar](https://img.shields.io/badge/Cafe%20Bazaar-Get%20it-00A651)](http://cafebazaar.ir/app/?id=com.mohsendastaran.istgah&ref=share)
+[![Myket](https://img.shields.io/badge/Myket-Get%20it-5B4CFF)](https://myket.ir/app/com.mohsendastaran.istgah)
+
 ---
 
 ## Table of Contents
 
+- [Download](#download)
 - [About](#about)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
@@ -266,6 +283,15 @@ flowchart TB
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
 - [License](#license)
+
+---
+
+## Download
+
+Install from Iranian Android stores:
+
+- [Cafe Bazaar](http://cafebazaar.ir/app/?id=com.mohsendastaran.istgah&ref=share)
+- [Myket](https://myket.ir/app/com.mohsendastaran.istgah)
 
 ---
 
