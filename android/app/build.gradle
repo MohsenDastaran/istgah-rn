@@ -148,8 +148,12 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Use ANDROID_KEY_* secrets via android/keystore.properties when present.
-            signingConfig (System.getenv("ISTGAH_STORE_FILE") || keystorePropertiesFile.exists()) ? signingConfigs.release : signingConfigs.debug
+            // Use ANDROID_KEY_* secrets when present; otherwise debug-sign so CI still packages.
+            if (System.getenv("ISTGAH_STORE_FILE") || keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

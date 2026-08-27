@@ -98,7 +98,12 @@ function withAndroidReleaseApks(config) {
 
     contents = contents.replace(
       /release \{\n            \/\/ Caution![\s\S]*?signingConfig signingConfigs\.debug/,
-      'release {\n            signingConfig (System.getenv("ISTGAH_STORE_FILE") || keystorePropertiesFile.exists()) ? signingConfigs.release : signingConfigs.debug'
+      `release {
+            if (System.getenv("ISTGAH_STORE_FILE") || keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }`
     );
 
     if (!contents.includes('versionCodeOverride')) {
