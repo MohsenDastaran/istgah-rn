@@ -172,12 +172,14 @@ jobs:
         env:
           VERSION: ${{ needs.meta.outputs.version }}
           VERSION_CODE: ${{ needs.meta.outputs.version_code }}
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dkotlin.daemon.jvm.options=-Xmx2g,-XX:MaxMetaspaceSize=1g
         working-directory: android
         run: |
           set -euo pipefail
           chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
+            --max-workers=2 \
             -PistgahVersionName="$VERSION" \
             -PistgahVersionCode="$VERSION_CODE"
 
