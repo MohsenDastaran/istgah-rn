@@ -6,16 +6,15 @@
 #
 # Assets (sort key sits after the tag version so GitHub lists them in a stable order):
 #   istgah_X.Y.Z_01-android-arm64.apk
-#   istgah_X.Y.Z_01-android-armv7.apk
 #   istgah_X.Y.Z_01-android-universal.apk
-#   istgah_X.Y.Z_01-android-x86.apk
-#   istgah_X.Y.Z_01-android-x86_64.apk
 #
 # download-table then writes an OS/Arch badge table into the release body.
 # Version in filenames comes from the release tag (e.g. v1.0.1 → 1.0.1).
 #
-# Optional repo secrets for Play/sideload signing (Settings → Secrets → Actions):
+# Signing secrets (Settings → Secrets → Actions):
 #   ANDROID_KEY_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# Optional: ANDROID_STORE_PASSWORD (if different from the key password)
+# Optional: ANDROID_KEYSTORE_TYPE (PKCS12 or JKS; auto-detected if omitted)
 # If those are missing, the APKs are signed with a generated debug keystore.
 
 name: Release
@@ -144,19 +143,10 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEYSTORE_TYPE: ${{ secrets.ANDROID_KEYSTORE_TYPE }}
         run: |
           set -euo pipefail
-          if [ -n "${ANDROID_KEY_BASE64:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
-            echo "$ANDROID_KEY_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
-            {
-              echo "keyAlias=$ANDROID_KEY_ALIAS"
-              echo "password=$ANDROID_KEY_PASSWORD"
-              echo "keyPassword=$ANDROID_KEY_PASSWORD"
-              echo "storePassword=${ANDROID_STORE_PASSWORD:-$ANDROID_KEY_PASSWORD}"
-              echo "storeFile=$RUNNER_TEMP/keystore.jks"
-            } > android/keystore.properties
-            echo "Using ANDROID_KEY_* secrets for release signing."
-          else
+          if [ -z "${ANDROID_KEY_BASE64:-}" ] || [ -z "${ANDROID_KEY_ALIAS:-}" ] || [ -z "${ANDROID_KEY_PASSWORD:-}" ]; then
             echo "::warning::ANDROID_KEY_* secrets are not set; signing APKs with a debug keystore."
             if [ ! -f android/app/debug.keystore ]; then
               keytool -genkeypair -v -storetype JKS \
@@ -166,7 +156,61 @@ jobs:
                 -dname "CN=Android Debug,O=Android,C=US" \
                 -keyalg RSA -keysize 2048 -validity 10000
             fi
+            exit 0
           fi
+
+          KS="$RUNNER_TEMP/keystore"
+          # Secrets often contain wrapping newlines; strip whitespace from the base64 blob.
+          printf '%s' "$ANDROID_KEY_BASE64" | tr -d ' \r\n' | base64 -d > "$KS"
+
+          ALIAS=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r')
+          KEY_PASS=$(printf '%s' "$ANDROID_KEY_PASSWORD" | tr -d '\r')
+          STORE_PASS=$(printf '%s' "${ANDROID_STORE_PASSWORD:-$ANDROID_KEY_PASSWORD}" | tr -d '\r')
+          STORE_TYPE=$(printf '%s' "${ANDROID_KEYSTORE_TYPE:-}" | tr -d '\r')
+
+          unlocks() {
+            keytool -list -keystore "$KS" -storepass "$2" -storetype "$1" >/dev/null 2>&1
+          }
+
+          if [ -z "$STORE_TYPE" ]; then
+            if unlocks PKCS12 "$STORE_PASS" || unlocks PKCS12 "$KEY_PASS"; then
+              STORE_TYPE=PKCS12
+            elif unlocks JKS "$STORE_PASS" || unlocks JKS "$KEY_PASS"; then
+              STORE_TYPE=JKS
+            else
+              echo "::error::Cannot open the keystore as PKCS12 or JKS. Check ANDROID_KEY_PASSWORD / ANDROID_STORE_PASSWORD and that ANDROID_KEY_BASE64 is the raw .jks/.p12 file."
+              exit 1
+            fi
+          fi
+
+          if unlocks "$STORE_TYPE" "$STORE_PASS"; then
+            :
+          elif unlocks "$STORE_TYPE" "$KEY_PASS"; then
+            STORE_PASS="$KEY_PASS"
+          else
+            echo "::error::Keystore type ${STORE_TYPE} opened neither with ANDROID_STORE_PASSWORD nor ANDROID_KEY_PASSWORD."
+            exit 1
+          fi
+
+          if ! keytool -list -keystore "$KS" -storepass "$STORE_PASS" -storetype "$STORE_TYPE" -alias "$ALIAS" >/dev/null 2>&1; then
+            echo "::error::Alias not found in keystore. Set ANDROID_KEY_ALIAS to an alias from: keytool -list -keystore your.keystore"
+            keytool -list -keystore "$KS" -storepass "$STORE_PASS" -storetype "$STORE_TYPE" || true
+            exit 1
+          fi
+
+          {
+            echo "ISTGAH_STORE_FILE=$KS"
+            echo "ISTGAH_STORE_TYPE=$STORE_TYPE"
+          } >> "$GITHUB_ENV"
+          # Passwords via GITHUB_ENV can leak in logs; use a file the next step sources.
+          {
+            printf 'export ISTGAH_STORE_FILE=%q\n' "$KS"
+            printf 'export ISTGAH_STORE_TYPE=%q\n' "$STORE_TYPE"
+            printf 'export ISTGAH_KEY_ALIAS=%q\n' "$ALIAS"
+            printf 'export ISTGAH_KEY_PASSWORD=%q\n' "$KEY_PASS"
+            printf 'export ISTGAH_STORE_PASSWORD=%q\n' "$STORE_PASS"
+          } > "$RUNNER_TEMP/signing.env"
+          echo "Using ANDROID_KEY_* secrets (${STORE_TYPE})."
 
       - name: Build release APKs
         env:
@@ -176,6 +220,10 @@ jobs:
         working-directory: android
         run: |
           set -euo pipefail
+          if [ -f "$RUNNER_TEMP/signing.env" ]; then
+            # shellcheck disable=SC1091
+            source "$RUNNER_TEMP/signing.env"
+          fi
           chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
@@ -196,9 +244,6 @@ jobs:
 
           declare -A MAP=(
             ["app-arm64-v8a-release.apk"]="istgah_${VERSION}_01-android-arm64.apk"
-            ["app-armeabi-v7a-release.apk"]="istgah_${VERSION}_01-android-armv7.apk"
-            ["app-x86_64-release.apk"]="istgah_${VERSION}_01-android-x86_64.apk"
-            ["app-x86-release.apk"]="istgah_${VERSION}_01-android-x86.apk"
             ["app-universal-release.apk"]="istgah_${VERSION}_01-android-universal.apk"
           )
 
@@ -346,12 +391,12 @@ jobs:
             "",
             `${cafeBazaarBadge} ${myketBadge} — Iranian app stores.`,
             "",
-            "Most phones should use **ARMv8**. Universal works on every device but is larger.",
+            "Most phones should use **ARMv8**. Universal is the same ABI in one filename.",
             "",
             "<table>",
             "<thead><tr><th align=\"left\">OS / Arch</th><th align=\"left\">Compatibility</th></tr></thead>",
             "<tbody>",
-            `<tr><td>${badges}</td><td>Android 7.0 or later<br>arm64, armeabi-v7a, x86_64, x86</td></tr>`,
+            `<tr><td>${badges}</td><td>Android 7.0 or later<br>arm64-v8a</td></tr>`,
             "</tbody>",
             "</table>",
           ].join("\n")

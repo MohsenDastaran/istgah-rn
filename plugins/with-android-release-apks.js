@@ -10,23 +10,35 @@ if (keystorePropertiesFile.exists()) {
 }
 `;
 
-const SPLITS_BLOCK = `    // ${MARKER}: per-ABI + universal APKs for GitHub Releases
+const SPLITS_BLOCK = `    // ${MARKER}: arm64 split + universal APKs for GitHub Releases
     splits {
         abi {
             enable gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
             reset()
-            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+            include "arm64-v8a"
             universalApk true
         }
     }
 `;
 
 const RELEASE_SIGNING_CONFIG = `        release {
-            if (keystorePropertiesFile.exists()) {
+            if (System.getenv("ISTGAH_STORE_FILE")) {
+                storeFile new File(System.getenv("ISTGAH_STORE_FILE"))
+                keyAlias System.getenv("ISTGAH_KEY_ALIAS")
+                keyPassword System.getenv("ISTGAH_KEY_PASSWORD")
+                storePassword System.getenv("ISTGAH_STORE_PASSWORD")
+                if (System.getenv("ISTGAH_STORE_TYPE")) {
+                    storeType System.getenv("ISTGAH_STORE_TYPE")
+                }
+            } else if (keystorePropertiesFile.exists()) {
                 keyAlias keystoreProperties["keyAlias"]
                 keyPassword keystoreProperties["keyPassword"] ?: keystoreProperties["password"]
                 storePassword keystoreProperties["storePassword"] ?: keystoreProperties["password"]
-                storeFile file(keystoreProperties["storeFile"])
+                def storePath = keystoreProperties["storeFile"]
+                storeFile storePath.startsWith("/") ? new File(storePath) : file(storePath)
+                if (keystoreProperties["storeType"]) {
+                    storeType keystoreProperties["storeType"]
+                }
             }
         }
 `;
@@ -35,7 +47,7 @@ const VARIANT_CODES = `    applicationVariants.all { variant ->
         variant.outputs.each { output ->
             def abi = output.getFilter(com.android.build.OutputFile.ABI)
             if (abi != null) {
-                def abiCodes = ["armeabi-v7a": 1, "arm64-v8a": 2, "x86": 3, "x86_64": 4]
+                def abiCodes = ["arm64-v8a": 2]
                 output.versionCodeOverride = defaultConfig.versionCode * 10 + abiCodes.get(abi, 0)
             }
         }
@@ -86,7 +98,7 @@ function withAndroidReleaseApks(config) {
 
     contents = contents.replace(
       /release \{\n            \/\/ Caution![\s\S]*?signingConfig signingConfigs\.debug/,
-      'release {\n            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug'
+      'release {\n            signingConfig (System.getenv("ISTGAH_STORE_FILE") || keystorePropertiesFile.exists()) ? signingConfigs.release : signingConfigs.debug'
     );
 
     if (!contents.includes('versionCodeOverride')) {
